@@ -219,7 +219,4 @@ case class Player(name: String, hand: List[Card], points: Int, isHuman: Boolean,
     case _ => this
   }
 }
-case class Card(value: String, suit: String) {
-  override def toString: String = s"$value$suit"
-}
 
