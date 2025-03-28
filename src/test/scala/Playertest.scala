@@ -2,7 +2,7 @@ import java.io.ByteArrayInputStream
 import org.scalatest.funsuite.AnyFunSuite
 
 // Dummy-Implementierung für Testzwecke
-object ArschlochGame {
+object ArschlochGame_Dummy {
   def getValue(value: String): Int = value match {
     case "2"  => 2
     case "3"  => 3
