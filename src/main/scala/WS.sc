@@ -53,7 +53,7 @@ object ArschlochGame {
 
       // **Maximale Anzahl von Stapel-Resets verhindern**
       if (newPassCounter == players.length || (remainingPlayers.length == 2 && newPassCounter == 2)) {
-        if (resetCounter >= 5) { // 5 Resets in Folge -> Abbruch
+        if (resetCounter >= 5) { // 5 Resets in Folge  => Abbruch
           println("\n⚠ Keiner kann mehr spielen! Neue Runde wird gestartet.")
           return ranking.reverse
         }
@@ -90,6 +90,7 @@ object ArschlochGame {
 
     updatedPlayers
   }
+
 
 
   def mainGameLoop(players: List[Player]): Unit = {
@@ -150,6 +151,10 @@ object ArschlochGame {
   }
 
 }
+case class Card(value: String, suit: String) {
+  override def toString: String = s"$value$suit"
+}
+
 import scala.io.StdIn.readLine
 
 case class Player(name: String, hand: List[Card], points: Int, isHuman: Boolean, rank: Option[Int] = None) {
@@ -218,8 +223,4 @@ case class Player(name: String, hand: List[Card], points: Int, isHuman: Boolean,
     case _ if isHuman => this.copy(points = points + 200) // Bürger erhalten kleine Boni
     case _ => this
   }
-}
-
-case class Card(value: String, suit: String) {
-  override def toString: String = s"$value$suit"
 }

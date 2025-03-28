@@ -1,5 +1,7 @@
+package de.htwg.Player
 import scala.io.StdIn.readLine
 import scala.util.Random
+
 
 object ArschlochGame {
   val suits = List("♥", "♦", "♠", "♣")

@@ -1,4 +1,5 @@
 import org.scalatest.funsuite.AnyFunSuite
+
 import scala.util.Random
 
 class ArschlochGameTest extends AnyFunSuite {
