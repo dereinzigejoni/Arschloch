@@ -55,7 +55,7 @@ object ArschlochGame {
 
       // **Maximale Anzahl von Stapel-Resets verhindern**
       if (newPassCounter == players.length || (remainingPlayers.length == 2 && newPassCounter == 2)) {
-        if (resetCounter >= 5) { // 5 Resets in Folge  => Abbruch
+        if (resetCounter > 20) { // 5 Resets in Folge  => Abbruch
           println("\n⚠ Keiner kann mehr spielen! Neue Runde wird gestartet.")
           return ranking.reverse
         }
