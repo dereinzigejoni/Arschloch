@@ -103,14 +103,13 @@ object ArschlochGame {
     println("\n📊 Aktueller Punktestand:")
     newPlayers.foreach(p => println(s"${p.name}: ${p.points} Punkte"))
 
-    println("\n--- Drücke ENTER für die nächste Runde oder 'q' zum Beenden ---")
+    println("\n--- Drücke 'a' für die nächste Runde oder 'q' zum Beenden ---")
     val input = readLine()
     if (input.toLowerCase == "q") {
       println("👋 Spiel beendet! Danke fürs Spielen!")
-      return
+    }else {
+      mainGameLoop(newPlayers)
     }
-
-    mainGameLoop(newPlayers)
   }
 
   def askForPlayers(): List[Player] = {
