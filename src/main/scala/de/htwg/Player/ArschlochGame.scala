@@ -2,7 +2,6 @@ package de.htwg.Player
 import scala.io.StdIn.readLine
 import scala.util.Random
 
-
 object ArschlochGame {
   val suits = List("♥", "♦", "♠", "♣")
   val values = List("2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A")
@@ -55,7 +54,7 @@ object ArschlochGame {
 
       // **Maximale Anzahl von Stapel-Resets verhindern**
       if (newPassCounter == players.length || (remainingPlayers.length == 2 && newPassCounter == 2)) {
-        if (resetCounter > 20) { // 5 Resets in Folge  => Abbruch
+        if (resetCounter >= 50) { // 5 Resets in Folge  => Abbruch
           println("\n⚠ Keiner kann mehr spielen! Neue Runde wird gestartet.")
           return ranking.reverse
         }
@@ -79,8 +78,8 @@ object ArschlochGame {
     // **Rollenvergabe KORRIGIEREN**
     val updatedPlayers = ranking.zipWithIndex.map { case (p, rank) => p.copy(rank = Some(rank)).updatePoints(rank) }
 
-    val president = updatedPlayers.head
-    val arschloch = updatedPlayers.last
+    val president = updatedPlayers.last
+    val arschloch = updatedPlayers.head
 
     // **Doppelbelegung vermeiden**
     if (president == arschloch) {
