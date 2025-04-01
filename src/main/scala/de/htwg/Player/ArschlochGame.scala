@@ -70,7 +70,7 @@ object ArschlochGame {
 
     val ranking = playTurn(players, None, List(), 0)
 
-    if (ranking.isEmpty || ranking.length < 3) {
+    if (ranking.isEmpty || ranking.length < 2) {
       println("\n⚠ Fehler: Ungültige Rangliste. Das Spiel wird neu gestartet.")
       return players
     }
