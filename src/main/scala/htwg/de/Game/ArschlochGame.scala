@@ -1,4 +1,8 @@
-package de.htwg.Player
+package htwg.de.Game
+
+import htwg.de.Card.Card
+import htwg.de.Player.Player
+
 import scala.annotation.tailrec
 import scala.io.StdIn.readLine
 import scala.util.Random
@@ -100,13 +104,7 @@ object ArschlochGame {
       return players
     }
     println(s"\n🏆 ${president.name} ist Präsident! 💩 ${arschloch.name} ist Arschloch!")
-    val (newPresident, newArschloch) = exchangeCards(president, arschloch)
-    val finalPlayers = updatedPlayers.map {
-      case p if p.name == president.name => newPresident
-      case p if p.name == arschloch.name => newArschloch
-      case other => other
-    }
-    finalPlayers
+    updatedPlayers
   }
 
 
@@ -143,15 +141,17 @@ object ArschlochGame {
     // Runde spielen
     val newPlayers = playRound(finalPlayers)
 
-    println("\n📊 Aktueller Punktestand:")
-    newPlayers.foreach(p => println(s"${p.name}: ${p.points} Punkte"))
 
-    println("\n--- Drücke 'a' für die nächste Runde oder 'q' zum Beenden ---")
+
+    println("\n--- Drücke 'n' für die nächste Runde oder 'q' zum Beenden ---")
     val input = readLine()
     if (input.toLowerCase == "q") {
       println("👋 Spiel beendet! Danke fürs Spielen!")
-    } else {
+    } else if (input.toLowerCase == "n") {
       mainGameLoop(newPlayers)
+    }
+    else{
+      println("Tippe entweder 'n' für eine neue runde oder 'q' zum beeenden ein")
     }
   }
 

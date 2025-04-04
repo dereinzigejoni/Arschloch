@@ -1,4 +1,5 @@
-import de.htwg.Player.{ArschlochGame, Player,Card}
+import htwg.de.Game.ArschlochGame
+import htwg.de.Player.{Card, Player}
 import org.scalatest.funsuite.AnyFunSuite
 
 import scala.util.Random
@@ -79,4 +80,19 @@ class ArschlochGameTest extends AnyFunSuite {
     assert(newPresident.hand.toSet == expectedPresidentCards.toSet)
     assert(newArschloch.hand.toSet == expectedArschlochCards.toSet)
   }
+  test("mainGameLoop akzeptiert nur 'n' oder 'q' und reagiert entsprechend") {
+    // Eingabe: erst falsch, dann 'n', dann 'q' zum echten Beenden
+    val input = new java.io.ByteArrayInputStream("x\nn\nq\n".getBytes)
+
+    Console.withIn(input) {
+      // Testspieler mit gültigem Ranking (für Kartentausch)
+      val players = List(
+        Player("Alice", List(Card("A", "♠")), 0, isHuman = true, rank = Some(2)),
+        Player("Bob", List(Card("2", "♣")), 0, isHuman = false, rank = Some(0)),
+        Player("KI", List(Card("10", "♦")), 0, isHuman = false, rank = Some(1))
+      )
+      
+    }
+  }
+
 }

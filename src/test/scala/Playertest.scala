@@ -1,4 +1,5 @@
-import de.htwg.Player.{Card, Player}
+
+import htwg.de.Player.{Card, Player}
 
 import java.io.ByteArrayInputStream
 import org.scalatest.funsuite.AnyFunSuite

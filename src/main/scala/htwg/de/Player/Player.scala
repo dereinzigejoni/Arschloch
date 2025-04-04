@@ -1,4 +1,8 @@
-package de.htwg.Player
+package htwg.de.Player
+
+import htwg.de.Card.Card
+import htwg.de.Game.ArschlochGame
+
 import scala.io.StdIn.readLine
 case class Player(name: String, hand: List[Card], points: Int, isHuman: Boolean, rank: Option[Int] = None) {
   def playCard(lastPlayed: Option[List[Card]]): (Option[List[Card]], Player) = {
