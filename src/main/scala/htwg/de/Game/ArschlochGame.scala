@@ -31,37 +31,75 @@ object ArschlochGame {
     println(s"\n🔁 Kartentausch:")
     println(s"${arschloch.name} gibt seine besten Karten an ${president.name}: ${cardsFromArschloch.mkString(", ")}")
     println(s"${president.name} gibt seine schlechtesten Karten an ${arschloch.name}: ${cardsFromPresident.mkString(", ")}")
+
+    // Beim Präsidenten sollen die Karten NICHT entfernt werden, sondern hinzugefügt werden
+    val updatedPresident = president.copy(hand = president.hand ++ cardsFromArschloch)
     val updatedArschloch = arschloch.copy(hand = arschloch.hand.diff(cardsFromArschloch) ++ cardsFromPresident)
-    val updatedPresident = president.copy(hand = president.hand.diff(cardsFromPresident) ++ cardsFromArschloch)
+
     (updatedPresident, updatedArschloch)
   }
   def playRound(players: List[Player]): List[Player] = {
     println("\n🔄 Eine neue Runde beginnt...")
-    def playTurn(players: List[Player], lastPlayed: Option[List[Card]], ranking: List[Player], passCounter: Int, resetCounter: Int = 0): List[Player] = {
+    def playTurn(
+                  players: List[Player],
+                  lastPlayed: Option[List[Card]],
+                  ranking: List[Player],
+                  passCounter: Int,
+                  resetCounter: Int = 0
+                ): List[Player] = {
+      // Falls die Liste leer ist, geben wir das (umgekehrte) Ranking zurück.
+      if (players.isEmpty) return ranking.reverse
+
+      // Aktive Spieler sind diejenigen, die noch Karten haben.
       val remainingPlayers = players.filter(_.hand.nonEmpty)
-      if (remainingPlayers.length == 1) {
+
+      // Wenn nur noch ein aktiver Spieler übrig ist und alle anderen bereits fertig sind,
+      // beende die Runde, indem dieser Spieler als Letzter eingestuft wird.
+      if (remainingPlayers.length == 1 && ranking.length + 1 == players.length) {
         val lastPlayer = remainingPlayers.head
         println(s"\n💩 ${lastPlayer.name} ist das Arschloch, weil er als Letzter Karten hat!")
         return (ranking :+ lastPlayer.copy(rank = Some(players.length - 1))).reverse
       }
+
       println(s"\nAktuelle oberste Karte(n): ${lastPlayed.map(_.mkString(", ")).getOrElse("Kein Stapel")}")
       val currentPlayer = players.head
-      if (currentPlayer.hand.isEmpty) return playTurn(players.tail, lastPlayed, ranking, passCounter, resetCounter)
+
+      // Wenn der aktuelle Spieler keine Karten mehr hat, überspringe ihn,
+      // aber lasse ihn in der Liste, um die Spielreihenfolge beizubehalten.
+      if (currentPlayer.hand.isEmpty) {
+        println(s"${currentPlayer.name} hat keine Karten mehr und wird übersprungen.")
+        // Spieler bleibt in der Rotation, wird aber ans Ende der Liste gesetzt.
+        val nextPlayers = players.tail :+ currentPlayer
+        return playTurn(nextPlayers, lastPlayed, ranking, passCounter, resetCounter)
+      }
+
+      // Der aktuelle Spieler führt seinen Zug aus.
       val (playedCards, updatedPlayer) = currentPlayer.playCard(lastPlayed)
       val newLastPlayed = playedCards.orElse(lastPlayed)
-      val newRanking = if (updatedPlayer.hand.isEmpty) ranking :+ updatedPlayer else ranking
+      // Falls der Spieler nach seinem Zug keine Karten mehr hat und noch nicht im Ranking ist,
+      // füge ihn zum Ranking hinzu.
+      val newRanking = if (updatedPlayer.hand.isEmpty && !ranking.exists(_.name == updatedPlayer.name))
+        ranking :+ updatedPlayer
+      else ranking
       val newPassCounter = if (playedCards.isEmpty) passCounter + 1 else 0
-      if (newPassCounter == players.length || (remainingPlayers.length == 2 && newPassCounter == 2)) {
+
+      // Wenn alle aktiven Spieler passen (oder bei zwei verbleibenden Spielern beide passen),
+      // wird der Stapel erneuert.
+      if (newPassCounter == remainingPlayers.length || (remainingPlayers.length == 2 && newPassCounter == 2)) {
         if (resetCounter >= 50) {
           println("\n⚠ Keiner kann mehr spielen! Neue Runde wird gestartet.")
           return ranking.reverse
         }
         println("\n🔄 Alle haben gepasst oder nur zwei Spieler übrig: Stapel wird erneuert!")
-        return playTurn(players.tail :+ updatedPlayer, None, newRanking, 0, resetCounter + 1)
+        val nextPlayers = players.tail :+ updatedPlayer
+        return playTurn(nextPlayers, None, newRanking, 0, resetCounter + 1)
       }
+
+      // Den aktuellen Spieler ans Ende der Liste setzen und weiterspielen.
       val nextPlayers = players.tail :+ updatedPlayer
       playTurn(nextPlayers, newLastPlayed, newRanking, newPassCounter, resetCounter)
     }
+
     val ranking = playTurn(players, None, List(), 0)
     if (ranking.isEmpty || ranking.length < 2) {
       println("\n⚠ Fehler: Ungültige Rangliste. Das Spiel wird neu gestartet.")

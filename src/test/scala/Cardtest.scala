@@ -1,35 +1,28 @@
 import htwg.de.Card.Card
-import org.scalatest.funsuite.AnyFunSuite
 
-class Cardtest extends AnyFunSuite {
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.matchers.should.Matchers
 
-  test("Card toString should return a string with value and suit") {
-    val card = Card("A", "♠")
-    assert(card.toString == "A♠")
-  }
+class CardTest extends AnyWordSpec with Matchers {
 
-  test("Card with value and suit should be correctly represented") {
-    val card = Card("10", "♦")
-    assert(card.toString == "10♦")
-  }
+  "A Card" should {
+    "be equal to another card with the same value and suit" in {
+      val card1 = Card("A", "♠")
+      val card2 = Card("A", "♠")
+      card1 shouldEqual card2
+    }
 
-  test("Card with single character value should be correctly represented") {
-    val card = Card("K", "♥")
-    assert(card.toString == "K♥")
-  }
+    "have a toString that returns the value and suit concatenated" in {
+      val card = Card("A", "♠")
+      card.toString shouldEqual "A♠"
+    }
 
-  test("Card with different suit should be correctly represented") {
-    val card = Card("7", "♣")
-    assert(card.toString == "7♣")
-  }
-
-  test("Card with number value should be correctly represented") {
-    val card = Card("2", "♠")
-    assert(card.toString == "2♠")
-  }
-
-  test("Card with invalid value should still return a valid string") {
-    val card = Card("Q", "♠")
-    assert(card.toString == "Q♠")
+    "not be equal to a card with a different value or suit" in {
+      val card1 = Card("A", "♠")
+      val card2 = Card("K", "♠")
+      val card3 = Card("A", "♥")
+      card1 should not equal card2
+      card1 should not equal card3
+    }
   }
 }

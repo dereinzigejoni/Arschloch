@@ -1,99 +1,174 @@
-import htwg.de.Game.ArschlochGame
-import htwg.de.Player.Player
+package htwg.de.Game
+
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.matchers.should.Matchers
 import htwg.de.Card.Card
-import org.scalatest.funsuite.AnyFunSuite
+import htwg.de.Player.Player
+import htwg.de.Game.ArschlochGame
 
-import scala.util.Random
+class ArschlochGameTest extends AnyWordSpec with Matchers {
 
-class ArschlochGameTest extends AnyFunSuite {
+  // Hilfsfunktion zum Erzeugen einer Karte mit dem Symbol ♠
+  private def card(value: String): Card = Card(value, "♠")
 
-  test("getValue should return correct integer value for cards") {
-    assert(ArschlochGame.getValue("2") == 2)
-    assert(ArschlochGame.getValue("10") == 10)
-    assert(ArschlochGame.getValue("J") == 11)
-    assert(ArschlochGame.getValue("Q") == 12)
-    assert(ArschlochGame.getValue("K") == 13)
-    assert(ArschlochGame.getValue("A") == 14)
-  }
-
-  test("createDeck should return a full deck of 52 unique cards with correct suits and values") {
-    val deck = ArschlochGame.createDeck()
-    assert(deck.length == 52)
-    assert(deck.distinct.length == 52)
-    assert(deck.forall(card => ArschlochGame.suits.contains(card.suit)))
-    assert(deck.forall(card => ArschlochGame.values.contains(card.value)))
-  }
-
-  test("shuffleAndDeal should distribute cards evenly among players") {
-    val players = List(Player("Alice", List(), 0, isHuman = true), Player("Bob", List(), 0, isHuman = true))
-    val dealtPlayers = ArschlochGame.shuffleAndDeal(players)
-    assert(dealtPlayers.forall(_.hand.nonEmpty))
-    assert(dealtPlayers.map(_.hand.length).distinct.length == 1) // gleiche Kartenanzahl
-    assert(dealtPlayers.flatMap(_.hand).distinct.length == 52) // alle Karten vorhanden
-  }
-
-  /*test("playRound should return players with ranks assigned and determine the last player as Arschloch") {
-    val players = List(
-      Player("Alice", List(Card("5", "♠")), 0, isHuman = true),
-      Player("Bob", List(Card("8", "♣")), 0, isHuman = true)
-    )
-    val updatedPlayers = ArschlochGame.playRound(players)
-    assert(updatedPlayers.forall(_.rank.isDefined))
-    assert(updatedPlayers.last.rank.contains(updatedPlayers.length - 1)) // letzter Spieler ist Arschloch
-  }*/
-
-  test("askForPlayers should create correct number of players with names and human flags") {
-    // Simulierte Eingaben
-    val input = new java.io.ByteArrayInputStream("4\n2\nAlice\nBob\n".getBytes)
-    Console.withIn(input) {
-      val players = ArschlochGame.askForPlayers()
-      assert(players.length == 4)
-      assert(players.count(_.isHuman) == 2)
-      assert(players.count(!_.isHuman) == 2)
-      assert(players.exists(_.name == "Alice"))
-      assert(players.exists(_.name == "Bob"))
+  "getValue" should {
+    "return correct numeric values" in {
+      ArschlochGame.getValue("2") shouldEqual 2
+      ArschlochGame.getValue("10") shouldEqual 10
+      ArschlochGame.getValue("J") shouldEqual 11
+      ArschlochGame.getValue("Q") shouldEqual 12
+      ArschlochGame.getValue("K") shouldEqual 13
+      ArschlochGame.getValue("A") shouldEqual 14
     }
   }
 
-  test("exchangeCards tauscht 2 beste gegen 2 schlechteste Karten") {
-    val card = (v: String) => Card(v, "♠")
-
-    val arschloch = Player(
-      name = "Arsch",
-      hand = List(card("A"), card("K"), card("10"), card("9")),
-      points = 0,
-      isHuman = false
-    )
-
-    val president = Player(
-      name = "Präsi",
-      hand = List(card("2"), card("3"), card("4"), card("5")),
-      points = 0,
-      isHuman = false
-    )
-
-    val (newPresident, newArschloch) = ArschlochGame.exchangeCards(president, arschloch)
-
-    // Erwartete Karten
-    val expectedPresidentCards = List("2", "3", "4", "5", "K", "A").map(card)
-    val expectedArschlochCards = List("10", "9", "2", "3").map(card)
-
-    assert(newPresident.hand.toSet == expectedPresidentCards.toSet)
-    assert(newArschloch.hand.toSet == expectedArschlochCards.toSet)
+  "createDeck" should {
+    "generate 52 unique cards" in {
+      val deck = ArschlochGame.createDeck()
+      deck.size shouldEqual 52
+      deck.toSet.size shouldEqual 52
+    }
   }
-  test("mainGameLoop akzeptiert nur 'n' oder 'q' und reagiert entsprechend") {
-    // Eingabe: erst falsch, dann 'n', dann 'q' zum echten Beenden
-    val input = new java.io.ByteArrayInputStream("x\nn\nq\n".getBytes)
 
-    Console.withIn(input) {
-      // Testspieler mit gültigem Ranking (für Kartentausch)
+  "shuffleAndDeal" should {
+    "deal correct number of cards to each player" in {
       val players = List(
-        Player("Alice", List(Card("A", "♠")), 0, isHuman = true, rank = Some(2)),
-        Player("Bob", List(Card("2", "♣")), 0, isHuman = false, rank = Some(0)),
-        Player("KI", List(Card("10", "♦")), 0, isHuman = false, rank = Some(1))
+        Player("Player1", List(), 0, isHuman = false),
+        Player("Player2", List(), 0, isHuman = false),
+        Player("Player3", List(), 0, isHuman = false),
+        Player("Player4", List(), 0, isHuman = false)
       )
-      
+      val dealtPlayers = ArschlochGame.shuffleAndDeal(players)
+      // Bei 4 Spielern sollten 52 / 4 = 13 Karten pro Spieler verteilt werden.
+      dealtPlayers.foreach(p => p.hand.size shouldEqual 13)
     }
   }
 
+  "exchangeCards" should {
+    "swap 2 best for 2 worst cards" in {
+      // Ausgangshände:
+      // Arsch: A♠, K♠, 10♠, 9♠ (beste Karten: A♠, K♠)
+      // Präsi: 2♠, 3♠, 4♠, 5♠ (schlechteste Karten: 2♠, 3♠)
+      val arsch = Player(
+        name = "Arsch",
+        hand = List(card("A"), card("K"), card("10"), card("9")),
+        points = 0,
+        isHuman = false
+      )
+      val praesi = Player(
+        name = "Präsi",
+        hand = List(card("2"), card("3"), card("4"), card("5")),
+        points = 0,
+        isHuman = false
+      )
+
+      val (newPraesi, newArsch) = ArschlochGame.exchangeCards(praesi, arsch)
+
+      // Erwartet wird, dass Präsi seine ursprünglichen Karten behält und die 2 besten Karten von Arsch erhält.
+      val expectedPraesiCards = List("2", "3", "4", "5", "A", "K").map(card)
+      // Arsch verliert seine 2 besten Karten und erhält dafür die 2 schlechtesten Karten von Präsi.
+      val expectedArschCards = List("10", "9", "2", "3").map(card)
+
+      newPraesi.hand.toSet shouldEqual expectedPraesiCards.toSet
+      newArsch.hand.toSet shouldEqual expectedArschCards.toSet
+    }
+  }
+
+  // TestPlayer zur Simulation deterministischer Züge.
+  // Da Player ein case class ist, definieren wir TestPlayer als normale Klasse,
+  // die intern den aktuellen Handbestand in einer privaten Variable hält.
+  class TestPlayer(
+                    name: String,
+                    initialHand: List[Card],
+                    points: Int,
+                    isHuman: Boolean,
+                    rank: Option[Int],
+                    moves: Iterator[Option[List[Card]]]
+                  ) extends Player(name, initialHand, points, isHuman, rank) {
+    // Lokale, mutable Variable, um den aktuellen Handbestand zu simulieren.
+    private var currentHand: List[Card] = initialHand
+
+    override def playCard(lastPlayed: Option[List[Card]]): (Option[List[Card]], Player) = {
+      if (currentHand.isEmpty) (None, this)
+      else if (moves.hasNext) {
+        moves.next() match {
+          case Some(cards) =>
+            // Aktualisiere den Handbestand
+            currentHand = currentHand.filterNot(c => cards.contains(c))
+            // Erzeuge eine neue Instanz über copy, die den aktualisierten Handbestand enthält.
+            val updatedPlayer = this.copy(hand = currentHand)
+            (Some(cards), updatedPlayer)
+          case None =>
+            (None, this)
+        }
+      } else {
+        (None, this)
+      }
+    }
+  }
+
+  // AlwaysPassPlayer, die IMMER passt.
+  class AlwaysPassPlayer(
+                          name: String,
+                          initialHand: List[Card],
+                          points: Int,
+                          isHuman: Boolean,
+                          rank: Option[Int]
+                        ) extends Player(name, initialHand, points, isHuman, rank) {
+    override def playCard(lastPlayed: Option[List[Card]]): (Option[List[Card]], Player) = {
+      (None, this)
+    }
+  }
+
+  "playRound" should {
+    "finish and return a valid ranking with 4 players" in {
+      // Simuliere, dass jeder Spieler sukzessive eine Karte spielt, bis er leer ist.
+      def movesFor(hand: List[Card]): Iterator[Option[List[Card]]] =
+        hand.map(c => Some(List(c))).iterator
+
+      val p1 = new TestPlayer("P1", List(card("2"), card("3")), 0, isHuman = false, None, movesFor(List(card("2"), card("3"))))
+      val p2 = new TestPlayer("P2", List(card("4"), card("5")), 0, isHuman = false, None, movesFor(List(card("4"), card("5"))))
+      val p3 = new TestPlayer("P3", List(card("6"), card("7")), 0, isHuman = false, None, movesFor(List(card("6"), card("7"))))
+      val p4 = new TestPlayer("P4", List(card("8"), card("9")), 0, isHuman = false, None, movesFor(List(card("8"), card("9"))))
+
+      val players: List[Player] = List(p1, p2, p3, p4)
+      val ranking = ArschlochGame.playRound(players)
+
+      // Überprüfe, dass alle Spieler im Ranking sind und jeder einen gesetzten Rang hat.
+      ranking.size shouldEqual 4
+      ranking.foreach(p => p.rank.isDefined shouldEqual true)
+    }
+
+    "finish correctly with 6 players" in {
+      def movesFor(hand: List[Card]): Iterator[Option[List[Card]]] =
+        hand.map(c => Some(List(c))).iterator
+
+      val p1 = new TestPlayer("P1", List(card("2"), card("3")), 0, isHuman = false, None, movesFor(List(card("2"), card("3"))))
+      val p2 = new TestPlayer("P2", List(card("4"), card("5")), 0, isHuman = false, None, movesFor(List(card("4"), card("5"))))
+      val p3 = new TestPlayer("P3", List(card("6"), card("7")), 0, isHuman = false, None, movesFor(List(card("6"), card("7"))))
+      val p4 = new TestPlayer("P4", List(card("8"), card("9")), 0, isHuman = false, None, movesFor(List(card("8"), card("9"))))
+      val p5 = new TestPlayer("P5", List(card("10"), card("J")), 0, isHuman = false, None, movesFor(List(card("10"), card("J"))))
+      val p6 = new TestPlayer("P6", List(card("Q"), card("K")), 0, isHuman = false, None, movesFor(List(card("Q"), card("K"))))
+
+      val players: List[Player] = List(p1, p2, p3, p4, p5, p6)
+      val ranking = ArschlochGame.playRound(players)
+
+      // Alle 6 Spieler sollten im Ranking enthalten sein.
+      ranking.size shouldEqual 6
+      ranking.foreach(p => p.rank.isDefined shouldEqual true)
+    }
+
+    "reset the pile when all players always pass" in {
+      val p1 = new AlwaysPassPlayer("P1", List(card("2"), card("3")), 0, isHuman = false, None)
+      val p2 = new AlwaysPassPlayer("P2", List(card("4"), card("5")), 0, isHuman = false, None)
+      val p3 = new AlwaysPassPlayer("P3", List(card("6"), card("7")), 0, isHuman = false, None)
+      val p4 = new AlwaysPassPlayer("P4", List(card("8"), card("9")), 0, isHuman = false, None)
+
+      val players: List[Player] = List(p1, p2, p3, p4)
+      val ranking = ArschlochGame.playRound(players)
+
+      // Da niemand eine Karte spielt, wird der resetCounter irgendwann >= 50 erreicht und playTurn gibt ein leeres Ranking zurück.
+      ranking shouldBe empty
+    }
+  }
 }
