@@ -59,9 +59,9 @@ case class Player(name: String, hand: List[Card], points: Int, isHuman: Boolean,
     }
   }
 
-  def updatePoints(rank: Int): Player = rank match {
-    case 0 => this.copy(points = points + 1000) // Präsident
+  /*def updatePoints(rank: Int): Player = rank match {
+    case 0 => this.copy(points = points + 0) // Präsident
     case last if last == 3 => this.copy(points = points - 500) // Arschloch
     case _ => this.copy(points = points + 200) // Bürger erhalten kleine Boni
-  }
+  }*/
 }

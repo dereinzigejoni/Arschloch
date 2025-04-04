@@ -1,3 +1,4 @@
+import de.htwg.Player.{ArschlochGame, Player,Card}
 import org.scalatest.funsuite.AnyFunSuite
 
 import scala.util.Random
@@ -50,5 +51,32 @@ class ArschlochGameTest extends AnyFunSuite {
       assert(players.exists(_.name == "Alice"))
       assert(players.exists(_.name == "Bob"))
     }
+  }
+
+  test("exchangeCards tauscht 2 beste gegen 2 schlechteste Karten") {
+    val card = (v: String) => Card(v, "♠")
+
+    val arschloch = Player(
+      name = "Arsch",
+      hand = List(card("A"), card("K"), card("10"), card("9")),
+      points = 0,
+      isHuman = false
+    )
+
+    val president = Player(
+      name = "Präsi",
+      hand = List(card("2"), card("3"), card("4"), card("5")),
+      points = 0,
+      isHuman = false
+    )
+
+    val (newPresident, newArschloch) = ArschlochGame.exchangeCards(president, arschloch)
+
+    // Erwartete Karten
+    val expectedPresidentCards = List("2", "3", "4", "5", "K", "A").map(card)
+    val expectedArschlochCards = List("10", "9", "2", "3").map(card)
+
+    assert(newPresident.hand.toSet == expectedPresidentCards.toSet)
+    assert(newArschloch.hand.toSet == expectedArschlochCards.toSet)
   }
 }

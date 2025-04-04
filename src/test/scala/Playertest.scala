@@ -1,3 +1,5 @@
+import de.htwg.Player.{Card, Player}
+
 import java.io.ByteArrayInputStream
 import org.scalatest.funsuite.AnyFunSuite
 
@@ -117,29 +119,6 @@ class PlayerTest extends AnyFunSuite {
     assert(updatedAIPlayer.hand == aiPlayer.hand)
   }
 
-  /** Tests zu updatePoints:
-   */
-  test("Human player updatePoints: President (rank 0)") {
-    val humanPlayer = Player("Alice", List(cardA_Spades), 0, isHuman = true)
-    val updatedPlayer = humanPlayer.updatePoints(0)
-    assert(updatedPlayer.points == 1000)
-  }
+  
 
-  test("Human player updatePoints: Arschloch (rank 3)") {
-    val humanPlayer = Player("Bob", List(card10_Diamonds), 0, isHuman = true)
-    val updatedPlayer = humanPlayer.updatePoints(3)
-    assert(updatedPlayer.points == -500)
-  }
-
-  test("Human player updatePoints: Citizen (andere Ränge)") {
-    val humanPlayer = Player("Alice", List(card7_Clubs), 0, isHuman = true)
-    val updatedPlayer = humanPlayer.updatePoints(1)
-    assert(updatedPlayer.points == 200)
-  }
-
-  test("AI player updatePoints remains unchanged") {
-    val aiPlayer = Player("KI", List(card2_Spades), 0, isHuman = false)
-    val updatedAIPlayer = aiPlayer.updatePoints(0)
-    assert(updatedAIPlayer.points == 0)
-  }
 }
