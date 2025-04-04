@@ -8,7 +8,7 @@ case class Player(name: String, hand: List[Card], points: Int, isHuman: Boolean,
   def playCard(lastPlayed: Option[List[Card]]): (Option[List[Card]], Player) = {
     if (rank.isDefined) return (None, this)
     if (isHuman && hand.nonEmpty) {
-      println(s"\n$name, deine aktuellen Karten:")
+      println(s"\n$name, deine aktuellen Kartn:")
       hand.groupBy(_.value).values.toList.zipWithIndex.foreach { case (cards, index) =>
         println(s"${index + 1}: ${cards.mkString(", ")}")
       }
