@@ -1,5 +1,6 @@
 import htwg.de.Game.ArschlochGame
-import htwg.de.Player.{Card, Player}
+import htwg.de.Player.Player
+import htwg.de.Card.Card
 import org.scalatest.funsuite.AnyFunSuite
 
 import scala.util.Random

@@ -6,30 +6,23 @@ import htwg.de.Game.ArschlochGame
 import scala.io.StdIn.readLine
 case class Player(name: String, hand: List[Card], points: Int, isHuman: Boolean, rank: Option[Int] = None) {
   def playCard(lastPlayed: Option[List[Card]]): (Option[List[Card]], Player) = {
-    if (rank.isDefined) {
-      return (None, this) // Spieler mit Rang überspringen
-    }
-
+    if (rank.isDefined) return (None, this)
     if (isHuman && hand.nonEmpty) {
       println(s"\n$name, deine aktuellen Karten:")
       hand.groupBy(_.value).values.toList.zipWithIndex.foreach { case (cards, index) =>
         println(s"${index + 1}: ${cards.mkString(", ")}")
       }
-
       println("0: Passen")
       val choice = readLine().toIntOption.getOrElse(0)
       val groupedCards = hand.groupBy(_.value).values.toList
-
       if (choice >= 1 && choice <= groupedCards.length) {
         val chosenCards = groupedCards(choice - 1)
-
         if (lastPlayed.isDefined && chosenCards.length != lastPlayed.get.length) {
           println("Ungültiger Zug! Du musst die gleiche Anzahl von Karten spielen wie der vorherige Spieler.")
           return playCard(lastPlayed)
         }
-
         if (lastPlayed.isEmpty || ArschlochGame.getValue(chosenCards.head.value) > ArschlochGame.getValue(lastPlayed.get.head.value)) {
-          println(s"${name} spielt: ${chosenCards.mkString(", ")}")
+          println(s"$name spielt: ${chosenCards.mkString(", ")}")
           (Some(chosenCards), this.copy(hand = hand.diff(chosenCards)))
         } else {
           println("Ungültiger Zug! Die Karten müssen stärker sein.")
@@ -63,9 +56,4 @@ case class Player(name: String, hand: List[Card], points: Int, isHuman: Boolean,
     }
   }
 
-  /*def updatePoints(rank: Int): Player = rank match {
-    case 0 => this.copy(points = points + 0) // Präsident
-    case last if last == 3 => this.copy(points = points - 500) // Arschloch
-    case _ => this.copy(points = points + 200) // Bürger erhalten kleine Boni
-  }*/
 }

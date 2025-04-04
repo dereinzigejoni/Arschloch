@@ -1,4 +1,4 @@
-import htwg.de.Player.Card
+import htwg.de.Card.Card
 import org.scalatest.funsuite.AnyFunSuite
 
 class Cardtest extends AnyFunSuite {
