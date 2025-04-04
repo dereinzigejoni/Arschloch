@@ -6,7 +6,6 @@ import scala.util.Random
 object ArschlochGame {
   val suits = List("♥", "♦", "♠", "♣")
   val values = List("2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A")
-
   def getValue(card: String): Int = card match {
     case "J" => 11
     case "Q" => 12
@@ -14,10 +13,8 @@ object ArschlochGame {
     case "A" => 14
     case _ => card.toInt
   }
-
   def createDeck(): List[Card] =
     for { suit <- suits; value <- values } yield Card(value, suit)
-
   def shuffleAndDeal(players: List[Player]): List[Player] = {
     val deck = Random.shuffle(createDeck())
     val cardsPerPlayer = deck.length / players.length
@@ -26,7 +23,6 @@ object ArschlochGame {
       player.copy(hand = deck.slice(i * cardsPerPlayer, (i + 1) * cardsPerPlayer))
     }
   }
-
   def exchangeCards(president: Player, arschloch: Player): (Player, Player) = {
     val sortedArschlochHand = arschloch.hand.sortBy(c => getValue(c.value))(Ordering[Int].reverse)
     val sortedPresidentHand = president.hand.sortBy(c => getValue(c.value))
@@ -72,8 +68,8 @@ object ArschlochGame {
       }
 
       val (playedCards, updatedPlayer) = currentPlayer.playCard(lastPlayed)
-      
-      
+
+
       val newLastPlayed = playedCards.orElse(lastPlayed)
       val newRanking = if (updatedPlayer.hand.isEmpty) ranking :+ updatedPlayer else ranking
       val newPassCounter = if (playedCards.isEmpty) passCounter + 1 else 0
@@ -92,33 +88,24 @@ object ArschlochGame {
       playTurn(nextPlayers, newLastPlayed, newRanking, newPassCounter, resetCounter)
     }
     val ranking = playTurn(players, None, List(), 0)
-
     if (ranking.isEmpty || ranking.length < 2) {
       println("\n⚠ Fehler: Ungültige Rangliste. Das Spiel wird neu gestartet.")
       return players
     }
-
     val updatedPlayers = ranking.zipWithIndex.map { case (p, rank) => p.copy(rank = Some(rank)) }
-
     val president = updatedPlayers.last
     val arschloch = updatedPlayers.head
-
     if (president == arschloch) {
       println("\n⚠ Fehler: Präsident und Arschloch sind identisch. Das Spiel wird neu gestartet.")
       return players
     }
-
     println(s"\n🏆 ${president.name} ist Präsident! 💩 ${arschloch.name} ist Arschloch!")
-
-   
-    
     val (newPresident, newArschloch) = exchangeCards(president, arschloch)
     val finalPlayers = updatedPlayers.map {
       case p if p.name == president.name => newPresident
       case p if p.name == arschloch.name => newArschloch
       case other => other
     }
-
     finalPlayers
   }
 
@@ -128,15 +115,47 @@ object ArschlochGame {
     println("\n🎲 Spiel startet mit folgenden Spielern:")
     players.foreach(p => println(s"- ${p.name} (Mensch: ${p.isHuman})"))
 
-    val newPlayers = playRound(shuffleAndDeal(players))
+    // Ränge zurücksetzen, Karten neu geben
+    val resetPlayers = players.map(_.copy(rank = None))
+    val shuffledPlayers = shuffleAndDeal(resetPlayers)
+
+    // Letzte Runde war noch gültig? Dann tauschen!
+    val ranked = players.filter(_.rank.isDefined).sortBy(_.rank.get)
+    val (finalPlayers: List[Player]) = if (ranked.length >= 2) {
+      val arschloch = ranked.head
+      val president = ranked.last
+      println(s"\n🔁 Tausche Karten zwischen Präsident (${president.name}) und Arschloch (${arschloch.name})...")
+      val (newPresident, newArschloch) = exchangeCards(
+        shuffledPlayers.find(_.name == president.name).getOrElse(president),
+        shuffledPlayers.find(_.name == arschloch.name).getOrElse(arschloch)
+      )
+
+      // Alle Spieler mit aktualisierten Händen einfügen
+      shuffledPlayers.map {
+        case p if p.name == president.name => newPresident
+        case p if p.name == arschloch.name => newArschloch
+        case other => other
+      }
+    } else {
+      shuffledPlayers
+    }
+
+    // Runde spielen
+    val newPlayers = playRound(finalPlayers)
+
+    println("\n📊 Aktueller Punktestand:")
+    newPlayers.foreach(p => println(s"${p.name}: ${p.points} Punkte"))
+
     println("\n--- Drücke 'a' für die nächste Runde oder 'q' zum Beenden ---")
     val input = readLine()
     if (input.toLowerCase == "q") {
       println("👋 Spiel beendet! Danke fürs Spielen!")
-    }else {
+    } else {
       mainGameLoop(newPlayers)
     }
   }
+
+
 
   def askForPlayers(): List[Player] = {
     println("\n🎭 Willkommen bei Arschloch!")
