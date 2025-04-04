@@ -119,6 +119,6 @@ class PlayerTest extends AnyFunSuite {
     assert(updatedAIPlayer.hand == aiPlayer.hand)
   }
 
-  
+
 
 }

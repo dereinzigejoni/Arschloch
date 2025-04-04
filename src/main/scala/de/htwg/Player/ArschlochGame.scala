@@ -72,14 +72,8 @@ object ArschlochGame {
       }
 
       val (playedCards, updatedPlayer) = currentPlayer.playCard(lastPlayed)
-
-      playedCards match {
-        case Some(cards) =>
-          println(s"${currentPlayer.name} spielt: ${cards.mkString(", ")}")
-        case None =>
-          println(s"${currentPlayer.name} passt.")
-      }
-
+      
+      
       val newLastPlayed = playedCards.orElse(lastPlayed)
       val newRanking = if (updatedPlayer.hand.isEmpty) ranking :+ updatedPlayer else ranking
       val newPassCounter = if (playedCards.isEmpty) passCounter + 1 else 0
@@ -97,7 +91,6 @@ object ArschlochGame {
 
       playTurn(nextPlayers, newLastPlayed, newRanking, newPassCounter, resetCounter)
     }
-
     val ranking = playTurn(players, None, List(), 0)
 
     if (ranking.isEmpty || ranking.length < 2) {
