@@ -47,14 +47,14 @@ object ArschlochGame {
                   passCounter: Int,
                   resetCounter: Int = 0
                 ): List[Player] = {
-      // Falls die Liste leer ist, geben wir das (umgekehrte) Ranking zurück.
+      // Falls die Spieler-Liste leer ist, gebe das (umgekehrte) Ranking zurück.
       if (players.isEmpty) return ranking.reverse
 
-      // Aktive Spieler sind diejenigen, die noch Karten haben.
+      // Bestimme aktive Spieler, die noch Karten haben.
       val remainingPlayers = players.filter(_.hand.nonEmpty)
 
-      // Wenn nur noch ein aktiver Spieler übrig ist und alle anderen bereits fertig sind,
-      // beende die Runde, indem dieser Spieler als Letzter eingestuft wird.
+      // Sonderfall: Wenn nur noch ein aktiver Spieler übrig ist und alle anderen schon im Ranking,
+      // beende die Runde, indem dieser Spieler zuletzt eingestuft wird.
       if (remainingPlayers.length == 1 && ranking.length + 1 == players.length) {
         val lastPlayer = remainingPlayers.head
         println(s"\n💩 ${lastPlayer.name} ist das Arschloch, weil er als Letzter Karten hat!")
@@ -64,26 +64,29 @@ object ArschlochGame {
       println(s"\nAktuelle oberste Karte(n): ${lastPlayed.map(_.mkString(", ")).getOrElse("Kein Stapel")}")
       val currentPlayer = players.head
 
-      // Wenn der aktuelle Spieler keine Karten mehr hat, überspringe ihn,
-      // aber lasse ihn in der Liste, um die Spielreihenfolge beizubehalten.
+      // Wenn der aktuelle Spieler keine Karten mehr hat, entferne ihn aus der aktiven Liste!
       if (currentPlayer.hand.isEmpty) {
         println(s"${currentPlayer.name} hat keine Karten mehr und wird übersprungen.")
-        // Spieler bleibt in der Rotation, wird aber ans Ende der Liste gesetzt.
-        val nextPlayers = players.tail :+ currentPlayer
-        return playTurn(nextPlayers, lastPlayed, ranking, passCounter, resetCounter)
+        // Falls er noch nicht im Ranking ist, füge ihn hinzu.
+        val newRanking = if (!ranking.exists(_.name == currentPlayer.name))
+          ranking :+ currentPlayer.copy(rank = Some(ranking.size))
+        else ranking
+        // Entferne currentPlayer aus der Liste, statt ihn zu rotieren.
+        val nextPlayers = players.tail
+        return playTurn(nextPlayers, lastPlayed, newRanking, passCounter, resetCounter)
       }
 
-      // Der aktuelle Spieler führt seinen Zug aus.
+      println(s"${currentPlayer.name} spielt.")
+      // Führe den Spielzug des aktuellen Spielers aus.
       val (playedCards, updatedPlayer) = currentPlayer.playCard(lastPlayed)
       val newLastPlayed = playedCards.orElse(lastPlayed)
-      // Falls der Spieler nach seinem Zug keine Karten mehr hat und noch nicht im Ranking ist,
-      // füge ihn zum Ranking hinzu.
+      // Falls der Spieler nach dem Zug keine Karten mehr hat und nicht im Ranking ist, füge ihn hinzu.
       val newRanking = if (updatedPlayer.hand.isEmpty && !ranking.exists(_.name == updatedPlayer.name))
         ranking :+ updatedPlayer
       else ranking
       val newPassCounter = if (playedCards.isEmpty) passCounter + 1 else 0
 
-      // Wenn alle aktiven Spieler passen (oder bei zwei verbleibenden Spielern beide passen),
+      // Wenn alle aktiven Spieler passen oder (bei zwei Spielern) beide passen,
       // wird der Stapel erneuert.
       if (newPassCounter == remainingPlayers.length || (remainingPlayers.length == 2 && newPassCounter == 2)) {
         if (resetCounter >= 50) {
@@ -91,14 +94,15 @@ object ArschlochGame {
           return ranking.reverse
         }
         println("\n🔄 Alle haben gepasst oder nur zwei Spieler übrig: Stapel wird erneuert!")
-        val nextPlayers = players.tail :+ updatedPlayer
+        val nextPlayers = players.tail // Entferne currentPlayer aus der Rotation, ohne ihn neu hinzuzufügen.
         return playTurn(nextPlayers, None, newRanking, 0, resetCounter + 1)
       }
 
-      // Den aktuellen Spieler ans Ende der Liste setzen und weiterspielen.
+      // Normalerweise: setze den aktuellen Spieler ans Ende der Liste und fahre fort.
       val nextPlayers = players.tail :+ updatedPlayer
       playTurn(nextPlayers, newLastPlayed, newRanking, newPassCounter, resetCounter)
     }
+
 
     val ranking = playTurn(players, None, List(), 0)
     if (ranking.isEmpty || ranking.length < 2) {

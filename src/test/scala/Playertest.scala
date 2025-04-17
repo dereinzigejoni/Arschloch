@@ -1,50 +1,60 @@
-import htwg.de.Player.Player
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.matchers.should.Matchers
+import htwg.de.Player.Player
 import htwg.de.Card.Card
-import htwg.de.Game.ArschlochGame
 
-class PlayerTest extends AnyWordSpec with Matchers {
+class Playertest extends AnyWordSpec with Matchers {
+  "A Human Player" should {
+    "allow playing multiple individual cards by entering comma separated indices" in {
+      // Erzeuge einen Spieler mit drei Karten.
+      val card1 = Card("5", "♥")
+      val card2 = Card("5", "♦")
+      val card3 = Card("7", "♣")
+      // Hier bewusst unsortiert, damit die Sortierung getestet wird.
+      val player = Player("TestHuman", List(card1, card3, card2), 0, true)
 
-  // Hilfsfunktion zum Erzeugen einer Karte mit dem Symbol ♠
-  private def card(value: String): Card = Card(value, "♠")
+      // Definiere einen Input-Provider, der "1,3" zurückgibt.
+      val inputProvider = () => "1,2"
 
-  "A non-human Player" should {
-
-    "play a valid card group when lastPlayed is None" in {
-      // Beispiel: Spieler besitzt zwei 4er und eine 2.
-      // Gruppierung: List(List(4♠, 4♠), List(2♠)).
-      // Da die Hand weniger als 5 Karten enthält, wählt die KI den höchsten Wert, also die 4er.
-      val player = Player("KI", List(card("4"), card("4"), card("2")), 0, isHuman = false)
-      val (playedOpt, updatedPlayer) = player.playCard(None)
-
-      playedOpt shouldBe defined
-      val playedCards = playedOpt.get
-      // Alle gespielten Karten sollten den Wert "4" haben.
-      all(playedCards.map(_.value)) shouldEqual "4"
-      // Nach dem Zug sollte nur noch die 2 im Handbestand verbleiben.
-      updatedPlayer.hand shouldEqual List(card("2"))
-    }
-
-    "pass (return None) when no playable group is found with lastPlayed defined" in {
-      // lastPlayed definiert eine Gruppe mit einer Karte vom Wert "K"
-      val lastPlayedGroup = List(card("K"))
-      // Spieler besitzt nur niedrigere Karten, sodass kein Zug möglich ist.
-      val player = Player("KI", List(card("2"), card("2"), card("3")), 0, isHuman = false)
-      val (playedOpt, updatedPlayer) = player.playCard(Some(lastPlayedGroup))
-
-      playedOpt shouldBe empty
-      // Hand bleibt unverändert.
-      updatedPlayer.hand shouldEqual player.hand
+      val (played, updatedPlayer) = player.playCard(None, inputProvider)
+      played.isDefined shouldBe true
+      played.get should have length 2
+      // Bei der sortierten Hand (5♥, 6♦, 7♣) entspricht "1,3" den Karten card1 und card3.
+      played.get should contain theSameElementsAs List(card1, card2)
+      updatedPlayer.hand should have length 1
     }
   }
+  "A KI Player" should {
+    "eine gültige Karte spielen, wenn möglich" in {
+      val card1 = Card("5", "♥")
+      val card2 = Card("7", "♦")
+      val card3 = Card("9", "♣")
+      // KI-Spieler (isHuman = false)
+      val player = Player("TestKI", List(card1, card2, card3), 0, false)
+      // Ohne Vorgabe (lastPlayed = None) sollte die KI basierend auf der Logik (bei Handlänge < 5)
+      // die Karte mit dem höchsten Wert spielen.
+      val (played, updatedPlayer) = player.playCard(None)
+      played.isDefined shouldBe true
+      // Erwartet wird die Gruppe, die den höchsten Wert enthält – in diesem Fall Karte "9".
+      played.get.head.value shouldEqual card3.value
+      updatedPlayer.hand should not contain card3
+    }
 
-  "A human Player" should {
-    "return immediately if rank is defined" in {
-      // Ist rank gesetzt, wird playCard gleich beendet (ohne Input).
-      val player = Player("Human", List(card("A"), card("K")), 0, isHuman = true, rank = Some(1))
-      val (playedOpt, updatedPlayer) = player.playCard(None)
-      playedOpt shouldBe empty
+    "passen, wenn keine spielbare Karten-Gruppe vorhanden ist" in {
+      val card1 = Card("5", "♥")
+      // KI-Spieler besitzt eine Karte, aber lastPlayed erfordert beispielsweise 2 Karten.
+      val player = Player("TestKI", List(card1), 0, false)
+      val lastPlayed = Some(List(Card("6", "♦"), Card("6", "♣")))
+      val (played, updatedPlayer) = player.playCard(lastPlayed)
+      played shouldBe None
+      updatedPlayer.hand shouldEqual List(card1)
+    }
+
+    "sofort zurückgeben, wenn ein Rang definiert ist" in {
+      val card1 = Card("5", "♥")
+      val player = Player("RankedPlayer", List(card1), 0, false, Some(1))
+      val (played, updatedPlayer) = player.playCard(None)
+      played shouldBe None
       updatedPlayer shouldEqual player
     }
   }
