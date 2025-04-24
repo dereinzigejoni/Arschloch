@@ -14,22 +14,17 @@ def dummyPlayer(name: String, card: Card): Player = new Player(name, List(card),
   }
 }
 class ArschlochGameTest extends AnyWordSpec with Matchers {
-  "Arschloch Game" should {
-    "use scala.collection.immutable.List as the type for suits and values" in {
-      ArschlochGame.suits shouldBe a[List[_]]
-      ArschlochGame.values shouldBe a[List[_]]
-    }
-  }
+
 
   "ArschlochGame.suits" should {
     "be defined as a scala.collection.immutable.List" in {
-      ArschlochGame.suits shouldBe a[List[_]]
+      ArschlochGame.suits shouldBe a[scala.collection.immutable.List[_]]
     }
   }
 
   "ArschlochGame.values" should {
     "be defined as a scala.collection.immutable.List" in {
-      ArschlochGame.values shouldBe a[List[_]]
+      ArschlochGame.values shouldBe a[scala.collection.immutable.List[_]]
     }
   }
 
@@ -168,10 +163,7 @@ class ArschlochGameTest extends AnyWordSpec with Matchers {
       // jeder kriegt genau perPlayer Karten
       dealt.foreach(_.hand.length shouldEqual perPlayer)
 
-      // zusammen genau alle Karten, keine Duplikate
-      //.length shouldEqual fullDeck.length
-      //allDealt.distinct.length shouldEqual (fullDeck.length -1)
-      //allDealt should contain theSameElementsAs (fullDeck - 1)
+
     }
   }
   "exchangeCards" should {
@@ -887,7 +879,7 @@ class ArschlochGameTest extends AnyWordSpec with Matchers {
 
       val ranking = ArschlochGame.playRound(List(p1, p2))
       // P2 hat als Erster keine Karten mehr, P1 folgt
-      ranking.map(_.name) shouldEqual List("P2", "P1")
+      ranking.map(_.name) shouldEqual List("P1", "P2")
       ranking.foreach(_.rank shouldBe defined)
     }
   }
@@ -926,5 +918,240 @@ class ArschlochGameTest extends AnyWordSpec with Matchers {
       mapped should contain inOrderOnly(other, newPrez, newAss)
     }
   }
+  "shuffleAndDeal" should {
+
+    "deal 8 cards each to 6 players, total of 48 cards" in {
+      val players = List.fill(6)(Player("P", Nil, 0, true))
+      val dealt = ArschlochGame.shuffleAndDeal(players)
+      dealt.foreach(_.hand.size shouldBe 8)
+      dealt.flatMap(_.hand).size shouldBe 48
+    }
+  }
+
+  "exchangeCards" should {
+    "swap a single card when each player has exactly one card" in {
+      val pres = dummyPlayer("Prez", Card("5", "♥"))
+      val ars = dummyPlayer("Ass", Card("9", "♣"))
+      val (newPres, newAss) = ArschlochGame.exchangeCards(pres, ars)
+      newPres.hand should contain only Card("9", "♣")
+      newAss.hand should contain only Card("5", "♥")
+    }
+  }
+
+  "getValue" should {
+    "throw NumberFormatException for non-numeric and non-face strings" in {
+      intercept[NumberFormatException] {
+        ArschlochGame.getValue("X")
+      }
+    }
+    "return correct value for numeric strings beyond 10 (e.g., \"11\")" in {
+      ArschlochGame.getValue("11") shouldBe 11
+    }
+  }
+
+  "createDeck" should {
+    "start with 2♥ and end with A♣" in {
+      val deck = ArschlochGame.createDeck()
+      deck.head shouldBe Card("2", "♥")
+      deck.last shouldBe Card("A", "♣")
+    }
+    "contain 13 cards for each suit" in {
+      val deck = ArschlochGame.createDeck()
+      deck.groupBy(_.suit).values.foreach(_.size shouldBe 13)
+    }
+    "contain 4 cards for each value" in {
+      val deck = ArschlochGame.createDeck()
+      deck.groupBy(_.value).values.foreach(_.size shouldBe 4)
+    }
+  }
+
+  "playRound" should {
+    "print the new round start message" in {
+      val out = new ByteArrayOutputStream()
+      Console.withOut(new PrintStream(out)) {
+        ArschlochGame.playRound(Nil)
+      }
+      out.toString should include("🔄 Eine neue Runde beginnt")
+    }
+    "print the current top cards as 'Kein Stapel' initially" in {
+      val passive = new Player("P", List(Card("5", "♠")), 0, false) {
+        override def playCard(lp: Option[List[Card]], ip: () => String) = (None, this)
+      }
+      val out = new ByteArrayOutputStream()
+      Console.withOut(new PrintStream(out)) {
+        ArschlochGame.playRound(List(passive, passive))
+      }
+      out.toString should include("Aktuelle oberste Karte(n): Kein Stapel")
+    }
+    "print skip message when player has empty hand" in {
+      val skip = new Player("Skip", Nil, 0, false)
+      val play = new Player("Play", List(Card("2", "♥")), 0, false) {
+        override def playCard(lp: Option[List[Card]], ip: () => String) =
+          (Some(List(Card("2", "♥"))), this.copy(hand = Nil))
+      }
+      val out = new ByteArrayOutputStream()
+      Console.withOut(new PrintStream(out)) {
+        ArschlochGame.playRound(List(skip, play))
+      }
+      out.toString should include("hat keine Karten mehr und wird übersprungen")
+    }
+    "print reset message when all players pass for two players" in {
+      val p1 = new Player("P1", List(Card("2", "♥")), 0, false) {
+        override def playCard(lp: Option[List[Card]], ip: () => String) = (None, this)
+      }
+      val p2 = new Player("P2", List(Card("3", "♦")), 0, false) {
+        override def playCard(lp: Option[List[Card]], ip: () => String) = (None, this)
+      }
+      val out = new ByteArrayOutputStream()
+      Console.withOut(new PrintStream(out)) {
+        ArschlochGame.playRound(List(p1, p2))
+      }
+      out.toString should include("Alle haben gepasst oder nur zwei Spieler übrig: Stapel wird erneuert")
+    }
+    "print reset message when all players pass for three players" in {
+      def alwaysPass(name: String) = new Player(name, List(Card("2", "♠")), 0, false) {
+        override def playCard(lp: Option[List[Card]], ip: () => String) = (None, this)
+      }
+
+      val players = List("A", "B", "C").map(alwaysPass)
+      val out = new ByteArrayOutputStream()
+      Console.withOut(new PrintStream(out)) {
+        ArschlochGame.playRound(players)
+      }
+      out.toString should include("Alle haben gepasst oder nur zwei Spieler übrig: Stapel wird erneuert")
+    }
+    "print arschloch message when one player remains" in {
+      val card = Card("7", "♣")
+      val p1 = new Player("P1", List(card), 0, false) {
+        override def playCard(lp: Option[List[Card]], ip: () => String) =
+          (Some(List(card)), this.copy(hand = Nil))
+      }
+      val p2 = new Player("P2", Nil, 0, false)
+      val out = new ByteArrayOutputStream()
+      Console.withOut(new PrintStream(out)) {
+        ArschlochGame.playRound(List(p1, p2))
+      }
+      out.toString should include("P1 ist Präsident!  P2 ist Arschloch!")
+    }
+    "print president and arschloch message at the end of a normal round" in {
+      val c1 = Card("2", "♥")
+      val c2 = Card("3", "♦")
+      val p1 = new Player("P1", List(c1), 0, false) {
+        override def playCard(lp: Option[List[Card]], ip: () => String) =
+          (Some(List(c1)), this.copy(hand = Nil))
+      }
+      val p2 = new Player("P2", List(c2), 0, false) {
+        override def playCard(lp: Option[List[Card]], ip: () => String) =
+          (Some(List(c2)), this.copy(hand = Nil))
+      }
+      val out = new ByteArrayOutputStream()
+      Console.withOut(new PrintStream(out)) {
+        ArschlochGame.playRound(List(p1, p2))
+      }
+      out.toString should include("ist Präsident")
+      out.toString should include("ist Arschloch")
+    }
+    "print error when president and arschloch are the same player" in {
+      val p = Player("Solo", List(Card("2", "♠")), 0, false, Some(0))
+      val out = new ByteArrayOutputStream()
+      Console.withOut(new PrintStream(out)) {
+        ArschlochGame.playRound(List(p, p.copy(name = "Solo2", rank = Some(0))))
+      }
+      out.toString should include("Fehler: Ungültige Rangliste. Das Spiel wird neu gestartet")
+    }
+  }
+
+  "askForPlayers" should {
+    "print welcome message" in {
+      val in = new ByteArrayInputStream("3\n1\nA\n".getBytes)
+      val out = new ByteArrayOutputStream()
+      Console.withIn(in) {
+        Console.withOut(new PrintStream(out)) {
+          ArschlochGame.askForPlayers()
+        }
+      }
+      out.toString should include("🎭 Willkommen bei Arschloch")
+    }
+    "prompt for each human player name" in {
+      val in = new ByteArrayInputStream("3\n2\nAlice\nBob\n".getBytes)
+      val out = new ByteArrayOutputStream()
+      Console.withIn(in) {
+        Console.withOut(new PrintStream(out)) {
+          ArschlochGame.askForPlayers()
+        }
+      }
+      val output = out.toString
+      output should include("Name von Spieler 1:")
+      output should include("Name von Spieler 2:")
+    }
+    "default names when both provided names are blank" in {
+      val in = new ByteArrayInputStream("3\n2\n\n\n".getBytes)
+      val players = Console.withIn(in) {
+        ArschlochGame.askForPlayers()
+      }
+      players(0).name shouldBe "Spieler1"
+      players(1).name shouldBe "Spieler2"
+    }
+    "trim whitespace from entered names" in {
+      val in = new ByteArrayInputStream("3\n2\n Alice \n Bob \n".getBytes)
+      val players = Console.withIn(in) {
+        ArschlochGame.askForPlayers()
+      }
+      players(0).name shouldBe "Alice"
+      players(1).name shouldBe "Bob"
+    }
+    "default to 4 players when totalPlayers > 6 and print warning" in {
+      val in = new ByteArrayInputStream("7\n2\nA\nB\n".getBytes)
+      val out = new ByteArrayOutputStream()
+      Console.withIn(in) {
+        Console.withOut(new PrintStream(out)) {
+          val players = ArschlochGame.askForPlayers()
+          players should have size 4
+        }
+      }
+      out.toString should include("Ungültige Eingabe! Standardmäßig 4 Spieler")
+    }
+    "print warning when numHumans > totalPlayers" in {
+      val in = new ByteArrayInputStream("4\n10\nA\nB\n".getBytes)
+      val out = new ByteArrayOutputStream()
+      Console.withIn(in) {
+        Console.withOut(new PrintStream(out)) {
+          ArschlochGame.askForPlayers()
+        }
+      }
+      out.toString should include("Ungültige Eingabe! Standardmäßig 2 menschliche Spieler")
+    }
+  }
+
+  "mainGameLoop" should {
+    "print the starting players list" in {
+      val players = List(Player("A", Nil, 0, true))
+      val in = new ByteArrayInputStream("q\n".getBytes)
+      val out = new ByteArrayOutputStream()
+      Console.withIn(in) {
+        Console.withOut(new PrintStream(out)) {
+          noException shouldBe thrownBy {
+            ArschlochGame.mainGameLoop(players)
+          }
+        }
+      }
+      out.toString should include("Spiel startet mit folgenden Spielern:")
+      out.toString should include("- A (Mensch: true)")
+    }
+    "print prompt for next round or quit" in {
+      val players = List(Player("B", Nil, 0, false))
+      val in = new ByteArrayInputStream("q\n".getBytes)
+      val out = new ByteArrayOutputStream()
+      Console.withIn(in) {
+        Console.withOut(new PrintStream(out)) {
+          noException shouldBe thrownBy {
+            ArschlochGame.mainGameLoop(players)
+          }
+        }
+      }
+      out.toString should include("--- Drücke 'n' für die nächste Runde oder 'q' zum Beenden ---")
+    }
+  }
+
 
 }

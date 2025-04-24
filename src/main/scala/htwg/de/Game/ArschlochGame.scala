@@ -175,4 +175,5 @@ object ArschlochGame {
 
     humanPlayers ++ aiPlayers
   }
+  
 }
