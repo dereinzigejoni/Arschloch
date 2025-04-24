@@ -1,3 +1,4 @@
+package htwg.de.PlayerTest
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.matchers.should.Matchers
 import htwg.de.Player.Player

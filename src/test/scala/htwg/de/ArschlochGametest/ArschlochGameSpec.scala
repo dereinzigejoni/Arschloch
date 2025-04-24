@@ -1,3 +1,4 @@
+package htwg.de.ArschlochGametest
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.matchers.should.Matchers
 import htwg.de.Game.ArschlochGame
@@ -13,32 +14,17 @@ def dummyPlayer(name: String, card: Card): Player = new Player(name, List(card),
     (Some(List(card)), copy(hand = List()))
   }
 }
-class ArschlochGameTest extends AnyWordSpec with Matchers {
+class ArschlochGameSpec extends AnyWordSpec with Matchers {
 
-
-  "ArschlochGame.suits" should {
-    "be defined as a scala.collection.immutable.List" in {
-      ArschlochGame.suits shouldBe a[scala.collection.immutable.List[_]]
-    }
-  }
 
   "ArschlochGame.values" should {
-    "be defined as a scala.collection.immutable.List" in {
-      ArschlochGame.values shouldBe a[scala.collection.immutable.List[_]]
+    "be a List" in {
+      ArschlochGame.values shouldBe a[List[_]]
     }
   }
-
-  "Die Liste values" should {
-    "die 13 Kartenwerte von Ass bis König enthalten" in {
-      val erwarteteValues = List("2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K","A")
-      ArschlochGame.values shouldEqual erwarteteValues
-    }
-  }
-
-  "Die Liste suits" should {
-    "die 4 Farben Herz, Karo, Kreuz und Pik enthalten" in {
-      val erwarteteSuits = List("♥", "♦", "♠", "♣")
-      ArschlochGame.suits shouldEqual erwarteteSuits
+  "ArschlochGame.suits" should {
+    "be a List" in {
+      ArschlochGame.suits shouldBe a[List[_]]
     }
   }
 
@@ -1152,6 +1138,58 @@ class ArschlochGameTest extends AnyWordSpec with Matchers {
       out.toString should include("--- Drücke 'n' für die nächste Runde oder 'q' zum Beenden ---")
     }
   }
+  // Zusätzliche Tests für bislang ungetestete Stellen
+  "ArschlochGame.suits und values" should {
+    "exakt den Literal-Listen entsprechen" in {
+      ArschlochGame.suits  shouldEqual List("♥", "♦", "♠", "♣")
+      ArschlochGame.values shouldEqual List("2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A")
+    }
+  }
+
+  "shuffleAndDeal" should {
+    "eine ArithmeticException werfen, wenn keine Spieler übergeben werden" in {
+      intercept[ArithmeticException] {
+        ArschlochGame.shuffleAndDeal(Nil)
+      }
+    }
+  }
+
+  "exchangeCards internals" should {
+    "die beiden höchsten Arschloch-Karten am Ende der Präsidenten-Hand anfügen" in {
+      val presHand = List(Card("3","♣"), Card("2","♣"), Card("5","♣"), Card("4","♣"))
+      val arsHand  = List(Card("7","♦"), Card("8","♦"), Card("6","♦"), Card("9","♦"))
+      val pres = Player("P", presHand, 0, isHuman = false)
+      val ars  = Player("A", arsHand,  0, isHuman = false)
+      val (newPres, _) = ArschlochGame.exchangeCards(pres, ars)
+      // Präsident gibt die beiden schwächsten (2,3) ab, erhält dann die stärksten des Arschloch (9,8) angehängt
+      newPres.hand shouldEqual List(Card("5","♣"), Card("4","♣"), Card("9","♦"), Card("8","♦"))
+    }
+  }
+
+  "playRound" should {
+    "zu Beginn 'Kein Stapel' ausgeben, wenn noch keine Karten gespielt wurden" in {
+      val pass = new Player("P", List(Card("5","♠")), 0, isHuman = false) {
+        override def playCard(lp: Option[List[Card]], ip: () => String) = (None, this)
+      }
+      val out = new ByteArrayOutputStream()
+      Console.withOut(new PrintStream(out)) {
+        ArschlochGame.playRound(List(pass, pass))
+      }
+      out.toString should include("Aktuelle oberste Karte(n): Kein Stapel")
+    }
+  }
+
+  "askForPlayers" should {
+
+    "keine KI-Spieler erzeugen, wenn numHumans == totalPlayers" in {
+      val input = Seq("4", "4", "A", "B", "C", "D").mkString("\n")
+      val in = new ByteArrayInputStream(input.getBytes)
+      val players = Console.withIn(in) { ArschlochGame.askForPlayers() }
+      players.filterNot(_.isHuman) shouldBe empty
+    }
+  }
+
+
 
 
 }
