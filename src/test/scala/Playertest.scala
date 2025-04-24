@@ -2,6 +2,8 @@ import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.matchers.should.Matchers
 import htwg.de.Player.Player
 import htwg.de.Card.Card
+import org.scalatest.matchers.dsl.MatcherWords.exist.or
+import org.scalatest.matchers.should.Matchers.exist.or
 
 class Playertest extends AnyWordSpec with Matchers {
   "A Human Player" should {
@@ -23,6 +25,90 @@ class Playertest extends AnyWordSpec with Matchers {
       played.get should contain theSameElementsAs List(card1, card2)
       updatedPlayer.hand should have length 1
     }
+    "pass when input is 0" in {
+      val card1 = Card("5", "♥")
+      val player = Player("TestHuman", List(card1), 0, true)
+      val (played, updated) = player.playCard(None, () => "0")
+      played shouldBe None
+      updated.hand should contain(card1)
+    }
+
+    "reject non-numeric input and re-ask" in {
+      var counter = 0
+      val inputs = List("abc", "1")
+      val player = Player("TestHuman", List(Card("5", "♥")), 0, true)
+      val (played, updated) = player.playCard(None, () => {
+        val in = inputs(counter); counter += 1; in
+      })
+      played.isDefined shouldBe true
+    }
+
+    "reject invalid index" in {
+      var counter = 0
+      val inputs = List("99", "1")
+      val card = Card("5", "♥")
+      val player = Player("TestHuman", List(card), 0, true)
+      val (played, updated) = player.playCard(None, () => {
+        val in = inputs(counter); counter += 1; in
+      })
+      played.get should contain(card)
+    }
+
+    "reject weaker card than last played" in {
+      var counter = 0
+      val card = Card("5", "♥")
+      val inputs = List("1", "1", "0") // dritte Eingabe beendet Eingabeversuche
+      val inputProvider = () => {
+        val in = inputs.lift(counter).getOrElse("0")
+        counter += 1
+        in
+      }
+
+      val player = Player("TestHuman", List(card), 0, true)
+      val (played, updated) = player.playCard(Some(List(Card("10", "♠"))), inputProvider)
+
+      val valid = played.isEmpty || played.get.isEmpty
+      valid shouldBe true
+    }
+
+
+    "reject different card amount than last played" in {
+      var counter = 0
+      val cards = List(Card("5", "♥"), Card("5", "♣"))
+      // 1. Versuch: falsche Anzahl → wird abgelehnt
+      // 2. Versuch: korrektes Pair (1,2) und höher als 4 → wird gespielt
+      val inputs = List("1", "1,2")
+      val inputProvider = () => {
+        val in = inputs(counter)
+        counter += 1
+        in
+      }
+
+      val player = Player("TestHuman", cards, 0, true)
+      // lastPlayed mit zwei 4ern → 5er-Pair ist höher und gleich viele Karten
+      val lastPlayed = Some(List(Card("4", "♠"), Card("4", "♦")))
+
+      val (played, updated) = player.playCard(lastPlayed, inputProvider)
+
+      // Jetzt sollte tatsächlich gespielt werden
+      played.isDefined shouldBe true
+      played.get should contain allElementsOf cards
+      // Und beide Karten sind aus der Hand entfernt
+      updated.hand shouldBe empty
+    }
+    "play a single card when input is valid" in {
+      val card = Card("9", "♠")
+      val player = Player("Solo", List(card), 0, isHuman = true)
+      val (played, updated) = player.playCard(None, () => "1")
+
+      played shouldBe defined
+      played.get should contain only card
+      updated.hand shouldBe empty
+    }
+   
+
+
+
   }
   "A KI Player" should {
     "eine gültige Karte spielen, wenn möglich" in {
@@ -58,4 +144,321 @@ class Playertest extends AnyWordSpec with Matchers {
       updatedPlayer shouldEqual player
     }
   }
+  "playCard" when {
+    "rank is already defined" should {
+      "return None and same player" in {
+        val card = Card("5", "♥")
+        val player = Player("P", List(card), 0, true, Some(1))
+        val (played, updated) = player.playCard(None, () => "anything")
+        played shouldBe None
+        updated shouldBe player
+      }
+      "immediately return None and itself" in {
+        val c = Card("5", "♥")
+        val p = Player("X", List(c), 0, isHuman = true, rank = Some(2))
+        val (played, next) = p.playCard(None, () => fail("Should not be called"))
+        played shouldBe None
+        next shouldBe p
+      }
+      "return None immediately (human)" in {
+        val card = Card("5", "♥")
+        val p = Player("P", List(card), 0, true, rank = Some(1))
+        val (played, next) = p.playCard(None, () => fail("should not be called"))
+        played shouldBe None
+        next shouldBe p
+      }
+      "return None immediately (KI)" in {
+        val card = Card("7", "♦")
+        val p = Player("P", List(card), 0, false, rank = Some(2))
+        val (played, next) = p.playCard(None)
+        played shouldBe None
+        next shouldBe p
+      }
+
+    }
+    "human with empty hand" should {
+      "delegate to KI logic and pass" in {
+        val p = Player("EmptyHuman", Nil, 0, true)
+        val (played, next) = p.playCard(None, () => fail("should not ask"))
+        played shouldBe None
+        next shouldBe p
+      }
+    }
+    "human interactions" should {
+
+      "pass on '0'" in {
+        val card = Card("5", "♣")
+        val p = Player("H", List(card), 0, true)
+        val (played, next) = p.playCard(None, () => "0")
+        played shouldBe None
+        next.hand should contain(card)
+      }
+
+      "reject non-numeric then accept valid" in {
+        var cnt = 0
+        val inputs = List("foo", "1")
+        val card = Card("9", "♠")
+        val p = Player("H", List(card), 0, true)
+        val (played, _) = p.playCard(None, () => {
+          val i = inputs(cnt); cnt += 1; i
+        })
+        played.get should contain(card)
+      }
+
+      "reject out-of-range index then accept" in {
+        var cnt = 0
+        val inputs = List("99", "1")
+        val card = Card("5", "♥")
+        val p = Player("H", List(card), 0, true)
+        val (played, _) = p.playCard(None, () => {
+          val i = inputs(cnt); cnt += 1; i
+        })
+        played.get should contain(card)
+      }
+
+      "reject wrong card-count vs lastPlayed then accept stronger" in {
+        var cnt = 0
+        val cards = List(Card("5", "♥"), Card("5", "♣"))
+        val inputs = List("1", "1,2")
+        val last = Some(List(Card("4", "♠"), Card("4", "♦")))
+        val p = Player("H", cards, 0, true)
+        val (played, next) = p.playCard(last, () => {
+          val i = inputs(cnt); cnt += 1; i
+        })
+        played.get should contain allElementsOf cards
+        next.hand shouldBe empty
+      }
+
+      "reject weaker card than lastPlayed then pass" in {
+        var cnt = 0
+        val inputs = List("1", "0")
+        val last = Some(List(Card("10", "♠")))
+        val card = Card("5", "♥")
+        val p = Player("H", List(card), 0, true)
+        val (played, next) = p.playCard(last, () => {
+          val i = inputs(cnt); cnt += 1; i
+        })
+        played shouldBe None
+        next.hand should contain(card)
+      }
+    }
+    "isHuman" should {
+      "pass on input 0" in {
+        val card = Card("5", "♥")
+        val player = Player("P", List(card), 0, true)
+        val (played, updated) = player.playCard(None, () => "0")
+        played shouldBe None
+        updated.hand should contain(card)
+      }
+      "reject non-numeric then accept valid" in {
+        var n = 0
+        val inputs = List("foo", "1")
+        val player = Player("P", List(Card("5", "♥")), 0, true)
+        val (played, _) = player.playCard(None, () => {
+          val in = inputs(n); n += 1; in
+        })
+        played.isDefined shouldBe true
+      }
+      "reject out-of-bounds index then accept" in {
+        var n = 0
+        val inputs = List("99", "1")
+        val card = Card("5", "♥")
+        val player = Player("P", List(card), 0, true)
+        val (played, _) = player.playCard(None, () => {
+          val in = inputs(n); n += 1; in
+        })
+        played.get should contain(card)
+      }
+      "reject wrong count vs lastPlayed then accept when correct and stronger" in {
+        var n = 0
+        val cards = List(Card("5", "♥"), Card("5", "♣"))
+        val inputs = List("1", "1,2")
+        val player = Player("P", cards, 0, true)
+        val lastPlayed = Some(List(Card("4", "♠"), Card("4", "♦")))
+        val (played, updated) = player.playCard(lastPlayed, () => {
+          val in = inputs(n); n += 1; in
+        })
+        played.isDefined shouldBe true
+        played.get should contain allElementsOf cards
+        updated.hand shouldBe empty
+      }
+    }
+    "is not human" should {
+      "play highest card when hand < 5" in {
+        val cards = List(Card("5", "♥"), Card("7", "♦"), Card("9", "♣"))
+        val player = Player("KI", cards, 0, false)
+        val (played, _) = player.playCard(None)
+        played.get.head.value shouldBe "9"
+      }
+      "play lowest card when hand ≥ 5" in {
+        val cards = List("2", "3", "4", "5", "6").map(v => Card(v, "♦"))
+        val player = Player("KI", cards, 0, false)
+        val (played, _) = player.playCard(None)
+        played.get.head.value shouldBe "2"
+      }
+      "pass when no group possible" in {
+        val player = Player("KI", List(Card("5", "♥")), 0, false)
+        val last = Some(List(Card("6", "♠"), Card("6", "♦")))
+        val (played, updated) = player.playCard(last)
+        played shouldBe None
+        updated.hand should contain(Card("5", "♥"))
+      }
+    }
+    "a rank is already defined" should {
+      "immediately return None and itself" in {
+        val card = Card("5", "♥")
+        val p = Player("X", List(card), 0, isHuman = true, rank = Some(2))
+        val (played, next) = p.playCard(None, () => fail("Should not be called"))
+        played shouldBe None
+        next shouldBe p
+      }
+    }
+    "the player is human" should {
+      "pass on input '0'" in {
+        val card = Card("5", "♣")
+        val p = Player("H", List(card), 0, isHuman = true)
+        val (played, next) = p.playCard(None, () => "0")
+        played shouldBe None
+        next.hand should contain(card)
+      }
+      "reject out-of-range index then accept valid" in {
+        var cnt = 0
+        val inputs = List("9", "1")
+        val card = Card("9", "♠")
+        val p = Player("H", List(card), 0, isHuman = true)
+        val (played, _) = p.playCard(None, () => {
+          val in = inputs(cnt);
+          cnt += 1;
+          in
+        })
+        played.get should contain(card)
+      }
+      "reject wrong card-count vs lastPlayed then accept when correct and stronger" in {
+        var cnt = 0
+        val cards = List(Card("5", "♥"), Card("5", "♣"))
+        val inputs = List("1", "1,2")
+        val p = Player("H", cards, 0, isHuman = true)
+        val last = Some(List(Card("4", "♠"), Card("4", "♦")))
+        val (played, next) = p.playCard(last, () => {
+          val in = inputs(cnt);
+          cnt += 1;
+          in
+        })
+        played.isDefined shouldBe true
+        played.get should contain allElementsOf cards
+        next.hand shouldBe empty
+      }
+      "reject non-numeric input then accept valid" in {
+        var cnt = 0
+        val inputs = List("foo", "1")
+        val p = Player("H", List(Card("7", "♦")), 0, isHuman = true)
+        val (played, _) = p.playCard(None, () => {
+          val in = inputs(cnt);
+          cnt += 1;
+          in
+        })
+        played.isDefined shouldBe true
+      }
+      "reject weaker card than lastPlayed and then pass" in {
+        var cnt = 0
+        val inputs = List("1", "0")
+        val p = Player("H", List(Card("5", "♥")), 0, isHuman = true)
+        val (played, next) = p.playCard(
+          Some(List(Card("10", "♠"))),
+          () => {
+            val in = inputs(cnt);
+            cnt += 1;
+            in
+          }
+        )
+        played shouldBe None
+        next.hand.map(_.value) should contain("5")
+      }
+
+
+    }
+
+
+
+
+    "the player is AI" should {
+      "play highest single when hand < 5 and lastPlayed = None" in {
+        val cards = List("2", "8", "5").map(v => Card(v, "♦"))
+        val p = Player("AI", cards, 0, false)
+        val (played, next) = p.playCard(None)
+        played.get.map(_.value) shouldBe List("8")
+        next.hand should not contain Card("8", "♦")
+      }
+      "play lowest single when hand ≥ 5 and lastPlayed = None" in {
+        val cards = (2 to 6).map(n => Card(n.toString, "♣")).toList
+        val p = Player("AI", cards, 0, false)
+        val (played, next) = p.playCard(None)
+        played.get.map(_.value) shouldBe List("2")
+        next.hand should not contain Card("2", "♣")
+      }
+      "play a pair when available" in {
+        val c7a = Card("7", "♠");
+        val c7b = Card("7", "♥");
+        val c6 = Card("6", "♣")
+        val p = Player("AI", List(c7a, c6, c7b), 0, false)
+        val (played, _) = p.playCard(None)
+        // should pick both 7s
+        played.get should contain allElementsOf List(c7a, c7b)
+      }
+      "pass when no playable group exists" in {
+        val p = Player("AI", List(Card("5", "♥")), 0, false)
+        val last = Some(List(Card("6", "♦"), Card("6", "♠")))
+        val (played, next) = p.playCard(last)
+        played shouldBe None
+        next.hand should contain(Card("5", "♥"))
+      }
+      "überspringt menschliche Logik bei leerer Hand (geht in die KI-Logik)" in {
+        val p = Player("EmptyHuman", Nil, 0, isHuman = true)
+        val (played, updated) = p.playCard(None, () => "whatever")
+        played shouldBe None
+        updated shouldBe p
+      }
+      "play highest single card when hand < 5 and lastPlayed is None" in {
+        val hand = List("2", "8", "5").map(v => Card(v, "♦"))
+        val (played, _) = Player("AI", hand, 0, isHuman = false).playCard(None)
+        played.get.map(_.value) shouldBe List("8") // highest
+      }
+      "play lowest single card when hand ≥ 5" in {
+        // erstelle eine Int-Range von 2 bis 6 und wandle in Strings um
+        val hand = (2 to 6).map(n => Card(n.toString, "♣")).toList
+        val player = Player("KI", hand, 0, false)
+        val (played, _) = player.playCard(None)
+        // erwartet wird die Karte "2"
+        played.get.head.value shouldBe "2"
+      }
+      "pass when no playable group exists 2.0" in {
+        val p = Player("AI", List(Card("5", "♥")), 0, isHuman = false)
+        val last = Some(List(Card("6", "♦"), Card("6", "♠")))
+        val (played, next) = p.playCard(last)
+        played shouldBe None
+        next.hand should contain(Card("5", "♥"))
+      }
+      "play highest card when hand < 5 and lastPlayed = None " in {
+        val hand = List("2", "8", "5").map(v => Card(v, "♦"))
+        val (played, _) = Player("AI", hand, 0, isHuman = false).playCard(None)
+        played.get.map(_.value) shouldBe List("8")
+      }
+      "play lowest card when hand ≥ 5 and lastPlayed = None " in {
+        val hand = (2 to 6).map(n => Card(n.toString, "♣")).toList
+        val (played, _) = Player("AI", hand, 0, isHuman = false).playCard(None)
+        played.get.map(_.value) shouldBe List("2")
+      }
+      "KI spielt Paar, wenn mehrere gleiche Karten im Blatt sind" in {
+        val c7a = Card("7", "♠")
+        val c7b = Card("7", "♥")
+        val c6 = Card("6", "♣")
+        val ai = Player("KI", List(c7a, c6, c7b), 0, isHuman = false)
+        val (played, _) = ai.playCard(None)
+        // die KI sollte das Paar 7-7 spielen
+        played.get should contain allElementsOf List(c7a, c7b)
+      }
+
+    }
+  }
+
 }
