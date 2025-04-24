@@ -89,10 +89,6 @@ object ArschlochGame {
       // Wenn alle aktiven Spieler passen oder (bei zwei Spielern) beide passen,
       // wird der Stapel erneuert.
       if (newPassCounter == remainingPlayers.length || (remainingPlayers.length == 2 && newPassCounter == 2)) {
-        if (resetCounter >= 50) {
-          println("\n⚠ Keiner kann mehr spielen! Neue Runde wird gestartet.")
-          return ranking.reverse
-        }
         println("\n🔄 Alle haben gepasst oder nur zwei Spieler übrig: Stapel wird erneuert!")
         val nextPlayers = players.tail // Entferne currentPlayer aus der Rotation, ohne ihn neu hinzuzufügen.
         return playTurn(nextPlayers, None, newRanking, 0, resetCounter + 1)
@@ -106,22 +102,19 @@ object ArschlochGame {
 
     val ranking = playTurn(players, None, List(), 0)
     if (ranking.isEmpty || ranking.length < 2) {
-      println("\n⚠ Fehler: Ungültige Rangliste. Das Spiel wird neu gestartet.")
+      println("\nFehler: Ungültige Rangliste. Das Spiel wird neu gestartet.")
       return players
     }
     val updatedPlayers = ranking.zipWithIndex.map { case (p, rank) => p.copy(rank = Some(rank)) }
     val president = updatedPlayers.last
     val arschloch = updatedPlayers.head
-    if (president == arschloch) {
-      println("\n⚠ Fehler: Präsident und Arschloch sind identisch. Das Spiel wird neu gestartet.")
-      return players
-    }
-    println(s"\n🏆 ${president.name} ist Präsident! 💩 ${arschloch.name} ist Arschloch!")
+   
+    println(s"\n ${president.name} ist Präsident!  ${arschloch.name} ist Arschloch!")
     updatedPlayers
   }
   @tailrec
   def mainGameLoop(players: List[Player]): Unit = {
-    println("\n🎲 Spiel startet mit folgenden Spielern:")
+    println("\n Spiel startet mit folgenden Spielern:")
     players.foreach(p => println(s"- ${p.name} (Mensch: ${p.isHuman})"))
     val resetPlayers = players.map(_.copy(rank = None))
     val shuffledPlayers = shuffleAndDeal(resetPlayers)
@@ -129,7 +122,7 @@ object ArschlochGame {
     val finalPlayers: List[Player] = if (ranked.length >= 2) {
       val arschloch = ranked.head
       val president = ranked.last
-      println(s"\n🔁 Tausche Karten zwischen Präsident (${president.name}) und Arschloch (${arschloch.name})...")
+      println(s"\n Tausche Karten zwischen Präsident (${president.name}) und Arschloch (${arschloch.name})...")
       val (newPresident, newArschloch) = exchangeCards(
         shuffledPlayers.find(_.name == president.name).getOrElse(president),
         shuffledPlayers.find(_.name == arschloch.name).getOrElse(arschloch)

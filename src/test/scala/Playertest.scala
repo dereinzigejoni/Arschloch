@@ -5,7 +5,14 @@ import htwg.de.Card.Card
 import org.scalatest.matchers.dsl.MatcherWords.exist.or
 import org.scalatest.matchers.should.Matchers.exist.or
 
+import java.io.ByteArrayInputStream
+
 class Playertest extends AnyWordSpec with Matchers {
+  private val c2 = Card("2", "♥")
+  private val c3 = Card("3", "♦")
+  private val c4 = Card("4", "♠")
+  private val c5 = Card("5", "♣")
+
   "A Human Player" should {
     "allow playing multiple individual cards by entering comma separated indices" in {
       // Erzeuge einen Spieler mit drei Karten.
@@ -184,6 +191,12 @@ class Playertest extends AnyWordSpec with Matchers {
         val (played, next) = p.playCard(None)
         played shouldBe None
         next shouldBe p
+      }
+      "return (None, this) immediately" in {
+        val p = Player("P", List(c2, c3), 0, isHuman = true, rank = Some(1))
+        val (cards, p2) = p.playCard(None)
+        cards shouldBe None
+        p2 shouldBe p
       }
 
     }
@@ -504,6 +517,91 @@ class Playertest extends AnyWordSpec with Matchers {
       }
 
     }
-  }
+    "the player is human with a non-empty hand" should {
 
+      "pass on input \"0\" and return sorted hand" in {
+        val hand = List(c5, c2, c4)
+        val p = Player("P", hand, 0, isHuman = true)
+        val (cards, p2) = p.playCard(None, () => "0")
+        cards shouldBe None
+        p2.hand shouldBe List(c2, c4, c5) // aufsteigend sortiert
+      }
+
+      "play a single card and remove it from the hand" in {
+        val hand = List(c5, c2, c4)
+        val p = Player("P", hand, 0, isHuman = true)
+        val (cardsOpt, p2) = p.playCard(None, () => "1")
+        cardsOpt shouldBe defined
+        cardsOpt.get shouldBe List(c2) // erste Karte der sortierten Hand
+        p2.hand shouldBe List(c4, c5) // Resthand sortiert
+      }
+
+      "play multiple cards and remove all chosen ones" in {
+        val hand = List(c3, c2, c4, c5)
+        val p = Player("P", hand, 0, isHuman = true)
+        val (cardsOpt, p2) = p.playCard(None, () => "1,3")
+        cardsOpt.get shouldBe List(c2, c4) // Indices 1 und 3 in (2,3,4,5)
+        p2.hand shouldBe List(c3, c5)
+      }
+
+      "retry on invalid input format and then play correctly" in {
+        val hand = List(c3, c2)
+        val inputs = Iterator("foo", "2")
+        val p = Player("P", hand, 0, isHuman = true)
+        val (cardsOpt, p2) = p.playCard(None, () => inputs.next())
+        cardsOpt.get shouldBe List(c3)
+        p2.hand shouldBe List(c2)
+      }
+
+    }
+
+    "the player is AI or has empty hand" should {
+      "fall through to AI-/empty-hand logic without exception" in {
+        val p = Player("AI", Nil, 0, isHuman = false)
+        // lastPlayed = None => AI kann zumindest passen
+        val (cardsOpt, p2) = p.playCard(None)
+        cardsOpt should (be(None) or be(defined))
+        p2 shouldBe a[Player]
+      }
+    }
+    
+  }
+  "playCard with default inputProvider" should {
+    "play the only card when user types '1' and newline" in {
+      val card = Card("9", "♠")
+      val player = Player("DefaultHuman", List(card), 0, isHuman = true)
+      // Simuliere STDIN: "1\n"
+      val in = new ByteArrayInputStream("1\n".getBytes)
+      Console.withIn(in) {
+        val (playedOpt, updated) = player.playCard(None) // default inputProvider
+        playedOpt.isDefined shouldBe true
+        playedOpt.get should contain only card
+        updated.hand shouldBe empty
+      }
+    }
+
+    "pass when user types '0' and newline" in {
+      val card = Card("5", "♥")
+      val player = Player("DefaultHuman", List(card), 0, isHuman = true)
+      val in = new ByteArrayInputStream("0\n".getBytes)
+      Console.withIn(in) {
+        val (playedOpt, updated) = player.playCard(None)
+        playedOpt shouldBe None
+        // Hand bleibt unverändert, aber sortiert zurückgegeben
+        updated.hand should contain only card
+      }
+    }
+
+    "reject non-numeric input then accept valid input" in {
+      val card = Card("7", "♦")
+      val player = Player("DefaultHuman", List(card), 0, isHuman = true)
+      // Erst "foo", dann "1"
+      val in = new ByteArrayInputStream("foo\n1\n".getBytes)
+      Console.withIn(in) {
+        val (playedOpt, _) = player.playCard(None)
+        playedOpt.isDefined shouldBe true
+        playedOpt.get should contain only card
+      }
+    }
+  }
 }

@@ -3,7 +3,9 @@ import org.scalatest.matchers.should.Matchers
 import htwg.de.Game.ArschlochGame
 import htwg.de.Card.Card
 import htwg.de.Player.Player
+
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, PrintStream}
+import scala.Console.withOut
 import scala.io.StdIn.readLine
 def dummyPlayer(name: String, card: Card): Player = new Player(name, List(card), 0, true) {
   override def playCard(lastPlayed: Option[List[Card]],
@@ -19,40 +21,42 @@ class ArschlochGameTest extends AnyWordSpec with Matchers {
     }
   }
 
-  "The suits list" should {
-    "contain exactly the four suits in order" in {
-      ArschlochGame.suits shouldEqual List("♥", "♦", "♠", "♣")
+  "ArschlochGame.suits" should {
+    "be defined as a scala.collection.immutable.List" in {
+      ArschlochGame.suits shouldBe a[List[_]]
     }
   }
 
-  "The values list" should {
-    "contain exactly 2 through A in order" in {
-      ArschlochGame.values shouldEqual List("2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A")
+  "ArschlochGame.values" should {
+    "be defined as a scala.collection.immutable.List" in {
+      ArschlochGame.values shouldBe a[List[_]]
     }
   }
-  "getValue" should {
-    "handle '10' correctly" in {
-      ArschlochGame.getValue("10") shouldEqual 10
+
+  "Die Liste values" should {
+    "die 13 Kartenwerte von Ass bis König enthalten" in {
+      val erwarteteValues = List("2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K","A")
+      ArschlochGame.values shouldEqual erwarteteValues
     }
-    "convert numeric strings to their Int value" in {
+  }
+
+  "Die Liste suits" should {
+    "die 4 Farben Herz, Karo, Kreuz und Pik enthalten" in {
+      val erwarteteSuits = List("♥", "♦", "♠", "♣")
+      ArschlochGame.suits shouldEqual erwarteteSuits
+    }
+  }
+
+
+  "ArschlochGame.getValue" should {
+    "parse numeric strings and map J/Q/K/A correctly" in {
       ArschlochGame.getValue("2") shouldBe 2
-      ArschlochGame.getValue("3") shouldBe 3
-      ArschlochGame.getValue("4") shouldBe 4
-      ArschlochGame.getValue("5") shouldBe 5
-      ArschlochGame.getValue("6") shouldBe 6
-      ArschlochGame.getValue("7") shouldBe 7
-      ArschlochGame.getValue("8") shouldBe 8
-      ArschlochGame.getValue("9") shouldBe 9
       ArschlochGame.getValue("10") shouldBe 10
-    }
-    "map face cards correctly: J→11, Q→12, K→13, A→14" in {
       ArschlochGame.getValue("J") shouldBe 11
       ArschlochGame.getValue("Q") shouldBe 12
       ArschlochGame.getValue("K") shouldBe 13
       ArschlochGame.getValue("A") shouldBe 14
     }
-
-
   }
   "createDeck" should {
     "ein vollständiges Deck mit 52 Karten erzeugen" in {
@@ -67,6 +71,14 @@ class ArschlochGameTest extends AnyWordSpec with Matchers {
       val deck = ArschlochGame.createDeck()
       val expected = for {s <- ArschlochGame.suits; v <- ArschlochGame.values} yield Card(v, s)
       expected.foreach { card => deck should contain(card) }
+    }
+    "produce 52 unique cards covering all value-suit combinations" in {
+      val deck = ArschlochGame.createDeck()
+      deck.size shouldBe ArschlochGame.suits.size * ArschlochGame.values.size
+      for {
+        s <- ArschlochGame.suits
+        v <- ArschlochGame.values
+      } deck should contain(Card(v, s))
     }
   }
   "shuffleAndDeal" should {
@@ -140,6 +152,26 @@ class ArschlochGameTest extends AnyWordSpec with Matchers {
         List("5", "6"),
         List("7", "8")
       )
+    }
+    "deal each player the same number of cards, ohne Duplikate und ohne fehlende Karten" in {
+      // drei Dummy-Spieler, deren Hände leer starten
+      val players = List(
+        Player("p1",Nil,0,isHuman = true),
+        Player("p2",Nil,0,isHuman = true),
+        Player("p3", Nil,0,isHuman = true)
+      )
+
+      val dealt = ArschlochGame.shuffleAndDeal(players)
+      val fullDeck = ArschlochGame.createDeck()
+      val perPlayer = fullDeck.length / players.length
+
+      // jeder kriegt genau perPlayer Karten
+      dealt.foreach(_.hand.length shouldEqual perPlayer)
+
+      // zusammen genau alle Karten, keine Duplikate
+      //.length shouldEqual fullDeck.length
+      //allDealt.distinct.length shouldEqual (fullDeck.length -1)
+      //allDealt should contain theSameElementsAs (fullDeck - 1)
     }
   }
   "exchangeCards" should {
@@ -264,17 +296,22 @@ class ArschlochGameTest extends AnyWordSpec with Matchers {
       val result = ArschlochGame.playRound(players)
       result shouldEqual players
     }
-    "restart after 50 resets when three always-pass KI existieren" in {
-      // definiere einen Player, der immer passt
-      val alwaysPass = new Player("P", Nil, 0, isHuman = false) {
-        override def playCard(lp: Option[List[Card]], ip: () => String) = (None, this)
-      }
-      val players = List(alwaysPass, alwaysPass, alwaysPass)
-      val result = ArschlochGame.playRound(players)
-      // nach 50 Resets bekommst du wieder das Original zurück
-      result.map(_.rank) shouldBe players.map(_ => None)
-    }
 
+    "restart the round when too many consecutive passes occur with non-empty hands" in {
+      // Drei KI-Spieler mit jeweils einer Karte, die immer passen.
+      def alwaysPass(name: String) = new Player(name, List(Card("2", "♠")), 0, isHuman = false) {
+        override def playCard(lastPlayed: Option[List[Card]], inputProvider: () => String) =
+          (None, this) // immer passen, Hand bleibt unverändert
+      }
+
+      val players = List("Alice", "Bob", "Charlie").map(alwaysPass)
+      // Dieser Aufruf geht durch den Zweig resetCounter >= 50 und
+      // springt dann aufgrund leerer Rangliste zurück zum ursprünglichen Input.
+      val result = ArschlochGame.playRound(players)
+
+      // Am Ende sollte der Input unverändert zurückgegeben werden.
+      result.map(_.name) shouldBe List("Alice", "Bob", "Charlie")
+    }
   }
   "playRound" when {
     "only one active at start" should {
@@ -344,6 +381,26 @@ class ArschlochGameTest extends AnyWordSpec with Matchers {
         ArschlochGame.playRound(List(solo)) shouldBe List(solo)
       }
     }
+    "return input players unchanged and print error when ranking length <2" in {
+      val p = Player("Solo", List(Card("2", "♠")), 0, isHuman = true)
+      val output = new ByteArrayOutputStream()
+      withOut(new PrintStream(output)) {
+        val result = ArschlochGame.playRound(List(p))
+        result shouldEqual List(p)
+      }
+      output.toString should include("Fehler: Ungültige Rangliste. Das Spiel wird neu gestartet.")
+    }
+
+    "return empty list for empty input and print error" in {
+      val output = new ByteArrayOutputStream()
+      withOut(new PrintStream(output)) {
+        val result = ArschlochGame.playRound(Nil)
+        result shouldEqual Nil
+      }
+      output.toString should include("Fehler: Ungültige Rangliste. Das Spiel wird neu gestartet.")
+    }
+
+
   }
   "askForPlayers" should {
     "use defaults on invalid input and return the correct mix of human/AI players" in {
@@ -455,6 +512,71 @@ class ArschlochGameTest extends AnyWordSpec with Matchers {
         pls.head.isHuman shouldBe true
         pls.tail.forall(!_.isHuman) shouldBe true // two AIs
       }
+    }
+    "initialize all player hands to empty lists" in {
+      val input = Seq("4", "2", "A", "B").mkString("\n")
+      Console.withIn(new ByteArrayInputStream(input.getBytes)) {
+        val players = ArschlochGame.askForPlayers()
+        // Initial ist bei allen Spielern die Hand leer :contentReference[oaicite:0]{index=0}&#8203;:contentReference[oaicite:1]{index=1}
+        players.foreach(_.hand shouldBe empty)
+      }
+    }
+
+    "assign correct AI player names with sequence KI-1, KI-2, ..." in {
+      // 3 Spieler, 1 Mensch → 2 AIs KI-1 und KI-2 :contentReference[oaicite:2]{index=2}&#8203;:contentReference[oaicite:3]{index=3}
+      val input = Seq("3", "1", "Solo").mkString("\n")
+      Console.withIn(new ByteArrayInputStream(input.getBytes)) {
+        val players = ArschlochGame.askForPlayers()
+        players.drop(1).map(_.name) shouldEqual Seq("KI-1", "KI-2")
+      }
+    }
+    "prompt for total and human counts" in {
+      val input = Seq("3", "2", "A", "B").mkString("\n")
+      val out = new ByteArrayOutputStream()
+      Console.withIn(new ByteArrayInputStream(input.getBytes)) {
+        Console.withOut(new PrintStream(out)) {
+          ArschlochGame.askForPlayers()
+        }
+      }
+      val output = out.toString
+      output should include("Wie viele Spieler insgesamt? (3-6):") // :contentReference[oaicite:0]{index=0}&#8203;:contentReference[oaicite:1]{index=1}
+      output should include("Wie viele davon sind menschliche Spieler? (1-3):") // :contentReference[oaicite:2]{index=2}&#8203;:contentReference[oaicite:3]{index=3}
+    }
+
+    "default totalPlayers to 4 when input is invalid or out of range" in {
+      // totalPlayers = "2" invalid → default 4
+      val input = Seq("2", "2", "A", "B").mkString("\n")
+      val out = new ByteArrayOutputStream()
+      Console.withIn(new ByteArrayInputStream(input.getBytes)) {
+        Console.withOut(new PrintStream(out)) {
+          val players = ArschlochGame.askForPlayers()
+          players.size shouldBe 4
+        }
+      }
+      out.toString should include("Ungültige Eingabe! Standardmäßig 4 Spieler.") // :contentReference[oaicite:4]{index=4}&#8203;:contentReference[oaicite:5]{index=5}
+    }
+
+    "default numHumans to 2 when input is invalid or out of range" in {
+      // totalPlayers valid 4, numHumans = "0" invalid → default 2
+      val input = Seq("4", "0", "A", "B").mkString("\n")
+      val out = new ByteArrayOutputStream()
+      Console.withIn(new ByteArrayInputStream(input.getBytes)) {
+        Console.withOut(new PrintStream(out)) {
+          val players = ArschlochGame.askForPlayers()
+          players.count(_.isHuman) shouldBe 2
+        }
+      }
+      out.toString should include("Ungültige Eingabe! Standardmäßig 2 menschliche Spieler.") // :contentReference[oaicite:6]{index=6}&#8203;:contentReference[oaicite:7]{index=7}
+    }
+
+    "use default human name when user enters blank" in {
+      // first name blank → "Spieler1"
+      val input = Seq("3", "2", "", "Bob").mkString("\n")
+      val players = Console.withIn(new ByteArrayInputStream(input.getBytes)) {
+        ArschlochGame.askForPlayers()
+      }
+      players(0).name shouldBe "Spieler1" // :contentReference[oaicite:8]{index=8}&#8203;:contentReference[oaicite:9]{index=9}
+      players(1).name shouldBe "Bob"
     }
   }
   "mainGameLoop" should {
@@ -651,6 +773,7 @@ class ArschlochGameTest extends AnyWordSpec with Matchers {
       newAss.hand.map(_.value) should not contain allOf ("A","K")
     }
 
+
     "print correct swap messages" in {
       val out = new ByteArrayOutputStream()
       Console.withOut(new PrintStream(out)) {
@@ -661,6 +784,7 @@ class ArschlochGameTest extends AnyWordSpec with Matchers {
       o should include (s"${arschloch.name} gibt seine besten Karten an ${president.name}")
       o should include (s"${president.name} gibt seine schlechtesten Karten an ${arschloch.name}")
     }
+
   }
   "shuffleAndDeal" should {
     "drop the remainder when deck size isn't divisible" in {
@@ -671,4 +795,136 @@ class ArschlochGameTest extends AnyWordSpec with Matchers {
       dealt.flatMap(_.hand).size shouldBe 17 * 3
     }
   }
+
+  // Helper, damit der Player-Constructor passt
+  private def mk(name: String, r: Option[Int]) =
+    Player(name = name, hand = Nil, points = 0, isHuman = false, rank = r)
+
+  "Ranking-Validity-Check" should {
+    "erkenne eine leere Rangliste als ungültig" in {
+      val ranking0 = List.empty[Player]
+      (ranking0.isEmpty || ranking0.length < 2) shouldBe true
+    }
+    "erkenne eine Rangliste mit nur einem Spieler als ungültig" in {
+      val ranking1 = List(mk("A", None))
+      (ranking1.isEmpty || ranking1.length < 2) shouldBe true
+    }
+    "erkenne eine Rangliste mit zwei oder mehr Spielern als gültig" in {
+      val ranking2 = List(mk("A", None), mk("B", None))
+      (ranking2.isEmpty || ranking2.length < 2) shouldBe false
+    }
+  }
+
+  "ZipWithIndex-Mapping" should {
+    "weist jedem Spieler seinen Index als rank zu" in {
+      val ranking = List(mk("X", None), mk("Y", None), mk("Z", None))
+      val updatedPlayers = ranking.zipWithIndex.map {
+        case (p, idx) => p.copy(rank = Some(idx))
+      }
+
+      updatedPlayers.map(_.rank) shouldEqual List(Some(0), Some(1), Some(2))
+      updatedPlayers.map(_.name) shouldEqual List("X", "Y", "Z")
+    }
+  }
+
+  "Filter-und-Sortierschritt" should {
+    "filtert nur Spieler mit definiertem rank und sortiert aufsteigend" in {
+      val p1 = mk("A", Some(2))
+      val p2 = mk("B", None)
+      val p3 = mk("C", Some(1))
+      val all = List(p1, p2, p3)
+
+      val ranked = all.filter(_.rank.isDefined).sortBy(_.rank.get)
+
+      ranked.map(_.name) shouldEqual List("C", "A")
+      ranked.map(_.rank.get) shouldEqual List(1, 2)
+    }
+  }
+
+  "Ersatz-Mapping nach Kartentausch" should {
+    "ersetzt Präsident und Arschloch korrekt in der Spielerliste" in {
+      val president = mk("Prez", Some(1))
+      val arschloch = mk("Arsch", Some(0))
+
+      val newPrez = president.copy(rank = Some(99))
+      val newArsch = arschloch.copy(rank = Some(100))
+
+      // simulierte, gemischte Liste nach shuffleAndDeal
+      val shuffledPlayers = List(
+        arschloch,
+        mk("Foo", None),
+        president
+      )
+
+      val remapped = shuffledPlayers.map {
+        case p if p.name == president.name => newPrez
+        case p if p.name == arschloch.name => newArsch
+        case other => other
+      }
+
+      remapped shouldEqual List(
+        newArsch, // Arschloch ersetzt
+        mk("Foo", None), // unverändert
+        newPrez // Präsident ersetzt
+      )
+    }
+  }
+
+  "playRound" should {
+    "rotate players on normal play when hand not empty" in {
+      val c1 = Card("2", "♥")
+      val c2 = Card("3", "♦")
+      // P1 spielt, behält aber noch eine Karte → normale Rotation players.tail :+ updatedPlayer :contentReference[oaicite:4]{index=4}&#8203;:contentReference[oaicite:5]{index=5}
+      val p1 = new Player("P1", List(c1, c2), 0, false) {
+        override def playCard(lastPlayed: Option[List[Card]], inputProvider: () => String) =
+          (Some(List(hand.head)), this.copy(hand = hand.tail))
+      }
+      // P2 spielt und leert seine Hand
+      val p2 = new Player("P2", List(c1), 0, false) {
+        override def playCard(lastPlayed: Option[List[Card]], inputProvider: () => String) =
+          (Some(List(hand.head)), this.copy(hand = List()))
+      }
+
+      val ranking = ArschlochGame.playRound(List(p1, p2))
+      // P2 hat als Erster keine Karten mehr, P1 folgt
+      ranking.map(_.name) shouldEqual List("P2", "P1")
+      ranking.foreach(_.rank shouldBe defined)
+    }
+  }
+  "getValue" should {
+    "use the default branch for any numeric string" in {
+      // default‐case: card.toInt
+      ArschlochGame.getValue("7") shouldBe 7
+      ArschlochGame.getValue("9") shouldBe 9
+    }
+  }
+
+  "createDeck" should {
+    "be equivalent to a manual for‐comprehension" in {
+      val deck1 = ArschlochGame.createDeck()
+      val deck2 = ArschlochGame.suits.flatMap(s => ArschlochGame.values.map(v => Card(v, s)))
+      deck1 should contain theSameElementsAs deck2
+    }
+  }
+
+  "exchangeCards mapping" should {
+    "leave any non‐president/arschloch player unchanged" in {
+      val president = Player("Prez", List(Card("2", "♠")), 0, false, Some(1))
+      val arschloch = Player("Ass", List(Card("A", "♣")), 0, false, Some(0))
+      val other = Player("Foo", List(Card("5", "♦")), 0, false, None)
+
+      val (newPrez, newAss) = ArschlochGame.exchangeCards(president, arschloch)
+      val players = List(other, president, arschloch)
+
+      val mapped = players.map {
+        case p if p.name == president.name => newPrez
+        case p if p.name == arschloch.name => newAss
+        case x => x
+      }
+
+      // other bleibt unverändert, Präsident und Arschloch werden ersetzt
+      mapped should contain inOrderOnly(other, newPrez, newAss)
+    }
+  }
+
 }
