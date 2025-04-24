@@ -143,8 +143,19 @@ class Playertest extends AnyWordSpec with Matchers {
       played shouldBe None
       updatedPlayer shouldEqual player
     }
+    "play highest group when hand.size < 5 und lastPlayed definiert" in {
+      val pair3 = List(Card("3", "♥"), Card("3", "♦"))
+      // Hand < 5, lastPlayed verlangt 2 Karten
+      val ai = Player("KI", pair3 ++ List(Card("4", "♣")), 0, isHuman = false)
+      val last = Some(List(Card("2", "♠"), Card("2", "♣")))
+      val (played, next) = ai.playCard(last)
+      played shouldBe defined
+      played.get should contain allElementsOf pair3
+      next.hand shouldNot contain allElementsOf pair3
+    }
   }
   "playCard" when {
+
     "rank is already defined" should {
       "return None and same player" in {
         val card = Card("5", "♥")
@@ -379,9 +390,43 @@ class Playertest extends AnyWordSpec with Matchers {
     }
 
 
+    "KI-Logik bei hand.size >= 5 und lastPlayed definiert" should {
+      "die niedrigste gültige Gruppe spielen" in {
+        // erstelle eine Hand mit zwei 3ern und sonst Einzelkarten
+        val pair3 = List(Card("3", "♥"), Card("3", "♦"))
+        val others = List("5", "6", "7").map(v => Card(v, "♣"))
+        val hand = pair3 ++ others
+        val ai = Player("KI", hand, 0, isHuman = false)
+        val lastPlayed = Some(List(Card("2", "♠"), Card("2", "♣")))
+        val (played, updated) = ai.playCard(lastPlayed)
+        // Die Paar-3 ist das einzige group-of-2 – und sie ist > 2
+        played shouldBe defined
+        played.get should contain allElementsOf pair3
+        // und aus der Hand entfernt
+        updated.hand shouldNot contain allElementsOf pair3
 
-
+      }
+    }
     "the player is AI" should {
+      "play the lowest valid group when hand.size >= 5 and lastPlayed is defined" in {
+        // Ein Paar 3er plus drei Einzelkarten → Hand.size == 5
+        val pair3 = List(Card("3", "♥"), Card("3", "♦"))
+        val others = List("5", "6", "7").map(v => Card(v, "♣"))
+        val hand = pair3 ++ others
+        val ai = Player("KI", hand, 0, isHuman = false)
+
+        // lastPlayed verlangt 2 Karten mit Wert 2
+        val last = Some(List(Card("2", "♠"), Card("2", "♣")))
+
+        val (played, updated) = ai.playCard(last)
+
+        // Die KI muss genau das Paar 3-3 spielen (einzige group-of-2 > 2)
+        played shouldBe defined
+        played.get should contain theSameElementsAs pair3
+
+        // Und die beiden 3er sind aus der Hand entfernt
+        updated.hand shouldNot contain allElementsOf pair3
+      }
       "play highest single when hand < 5 and lastPlayed = None" in {
         val cards = List("2", "8", "5").map(v => Card(v, "♦"))
         val p = Player("AI", cards, 0, false)

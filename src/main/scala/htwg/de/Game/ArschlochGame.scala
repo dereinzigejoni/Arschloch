@@ -28,13 +28,13 @@ object ArschlochGame {
     val sortedPresidentHand = president.hand.sortBy(c => getValue(c.value))
     val cardsFromArschloch = sortedArschlochHand.take(2)
     val cardsFromPresident = sortedPresidentHand.take(2)
-    println(s"\n🔁 Kartentausch:")
+    //println(s"\n🔁 Kartentausch:")
     println(s"${arschloch.name} gibt seine besten Karten an ${president.name}: ${cardsFromArschloch.mkString(", ")}")
     println(s"${president.name} gibt seine schlechtesten Karten an ${arschloch.name}: ${cardsFromPresident.mkString(", ")}")
 
     // Beim Präsidenten sollen die Karten NICHT entfernt werden, sondern hinzugefügt werden
-    val updatedPresident = president.copy(hand = president.hand ++ cardsFromArschloch)
-    val updatedArschloch = arschloch.copy(hand = arschloch.hand.diff(cardsFromArschloch) ++ cardsFromPresident)
+    val updatedPresident = president.copy(hand = president.hand.filterNot(cardsFromPresident.toSet) ++ cardsFromArschloch)
+    val updatedArschloch = arschloch.copy(hand = arschloch.hand.filterNot(cardsFromArschloch.toSet) ++ cardsFromPresident)
 
     (updatedPresident, updatedArschloch)
   }
