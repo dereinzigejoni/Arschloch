@@ -1,7 +1,7 @@
-package htwg.de.Cardtest
+package de.htwg.Card
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.matchers.should.Matchers
-import htwg.de.Card.Card
+import de.htwg.Card.Card
 
 class Cardtest extends AnyWordSpec with Matchers {
   "A Card" should {
