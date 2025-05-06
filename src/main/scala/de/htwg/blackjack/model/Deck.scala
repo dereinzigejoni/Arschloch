@@ -2,21 +2,22 @@ package de.htwg.blackjack.model
 
 import scala.util.Random
 
-class Deck {
-  private var cards: List[Card] =
-    for {
-      suit <- List(Suit.Hearts, Suit.Diamonds, Suit.Clubs, Suit.Spades)
-      rank <- List(Rank.Two, Rank.Three, Rank.Four, Rank.Five, Rank.Six,
-        Rank.Seven, Rank.Eight, Rank.Nine, Rank.Ten,
-        Rank.Jack, Rank.Queen, Rank.King, Rank.Ace)
-    } yield Card(rank, suit)
-
-  def shuffle(): Unit =
-    cards = Random.shuffle(cards)
-
-  def draw(): Option[Card] = cards match {
-    case h :: t => cards = t; Some(h)
-    case Nil    => None
+case class Deck(cards: List[Card]) {
+  def draw(): (Card, Deck) = cards match {
+    case head :: tail => (head, Deck(tail))
+    case Nil => throw new RuntimeException("Deck ist leer!")
   }
+  def shuffle: Deck = Deck(Random.shuffle(cards))
 }
 
+object Deck {
+  private val ranks = List("A","2","3","4","5","6","7","8","9","10","J","Q","K")
+  private val suits = List(Hearts, Diamonds, Clubs, Spades)
+  def fresh(): Deck = {
+    val all = for {
+      r <- ranks
+      s <- suits
+    } yield Card(r, s)
+    Deck(all).shuffle
+  }
+}
