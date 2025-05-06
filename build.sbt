@@ -1,22 +1,19 @@
-ThisBuild / version       := "0.1.0-SNAPSHOT"
-ThisBuild / scalaVersion  := "3.3.1"
+// build.sbt
 
-lazy val root = (project in file("."))
-  .settings(
-      name := "arschloch",
+name := "Blackjack"
 
-      // Tests
-      libraryDependencies ++= Seq(
-          "org.scalatest" %% "scalatest" % "3.2.18" % Test
-      ),
+version := "0.1.0"
 
-      // Scoverage aktivieren
-      coverageEnabled := true,
+scalaVersion := "2.13.10"
 
-      // Packages/Files, die Scoverage ignorieren soll.
-      // Mehrere Einträge per Semikolon in der Regex:
-      coverageExcludedPackages := "de\\.htwg\\.arschloch\\.ArschlochGame;htwg\\.de\\.TUI\\..*",
-      coverageExcludedFiles    := ".*TUI\\.scala" // Exkludiere pure List-Ident-Lookups in ArschlochGame
+// ScalaFX braucht seinen eigenen Resolver
+resolvers += "scalafx-releases" at "https://repo.scala-lang.org/scalafx/releases/"
 
-
+libraryDependencies ++= Seq(
+  "org.scalatest"   %% "scalatest"  % "3.2.19" % Test,
+  "org.scalatest"   %% "scalatest-wordspec" % "3.2.18" % Test,
+  // hier die ScalaFX-Dependency
+  "org.scalafx"     %% "scalafx"    % "22.0.0-R33"
 )
+
+
