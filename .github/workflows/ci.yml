@@ -28,8 +28,12 @@ jobs:
 
       - name: Run sbt tests
         run: sbt clean coverage test
+
+      - name: Generate coverage report
+        run: sbt coverageReport coverageAggregate
+
       - name: Publish coverage to Coveralls
         uses: coverallsapp/github-action@v2
         with:
-          github-token: ${{ COVERALLS_REPO_TOKEN=fG2nomRUSXzQwYWGnsbSH9I1fh619yJu3}}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           path-to-lcov: target/scala-2.13/scoverage-report/scoverage.lcov
