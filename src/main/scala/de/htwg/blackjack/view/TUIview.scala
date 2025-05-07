@@ -34,6 +34,23 @@ object TuiView {
   private val controller = new GameController()
   def printWelcome(): Unit = println("Willkommen zu Blackjack")
 
+  /** Erzeugt die Liste von Menü‑Optionen ohne I/O */
+  def formatMenuOptions(state: GameState, budget: Double): Seq[String] = {
+    val idx = state.activeHand
+    val hand = state.playerHands(idx)
+    val base = Seq("[H]it", "[S]tand", "[Q]uit")
+    val dbl =
+      if (hand.cards.size == 2 && budget >= state.bets(idx)) Seq("[D]ouble")
+      else Nil
+    val spl =
+      if (hand.cards.size == 2
+        && hand.cards(0).rank == hand.cards(1).rank
+        && budget >= state.bets(idx)) Seq("[P]split")
+      else Nil
+
+    base ++ dbl ++ spl
+  }
+
   def run(): Unit = {
     printWelcome()
     var playing = true
@@ -45,14 +62,7 @@ object TuiView {
         // Menü dynamisch je nach Splitt-/Double-Möglichkeit
         val st    = controller.getState
         val hand  = st.playerHands(st.activeHand)
-        val opts  = Seq(
-          "[H]it",
-          "[S]tand"
-        ) ++
-          (if (hand.cards.size == 2 && controller.getBudget >= controller.getState.bets(st.activeHand)) Seq("[D]ouble") else Nil) ++
-          (if (hand.cards.size == 2 && hand.cards(0).rank == hand.cards(1).rank && controller.getBudget >= controller.getState.bets(st.activeHand)) Seq("[P]split") else Nil) ++
-          Seq("[Q]uit")
-        println(opts.mkString(" ", " ", ""))
+        println(formatMenuOptions(controller.getState, controller.getBudget).mkString(" ", " ", ""))
         scala.io.StdIn.readLine().toUpperCase match {
           case "H" => controller.playerHit()
           case "S" => controller.playerStand()
@@ -69,7 +79,7 @@ object TuiView {
       renderFull()
       controller.resolveBet()
       println(f"Dein aktuelles Budget: ${controller.getBudget}%.2f")
-      println("[N]eues Spiel, [Q]uit?")
+      println(formateNewRoundPrompt())
       scala.io.StdIn.readLine().toUpperCase match {
         case "N" => // weiter
         case "Q" =>
@@ -81,7 +91,7 @@ object TuiView {
       }
     }
   }
-
+  def formateNewRoundPrompt(): String = "[N]eues Spiel, [Q]uit?"
 
   def askBet(): Unit = {
     var valid = false
