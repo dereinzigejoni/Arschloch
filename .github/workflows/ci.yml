@@ -18,6 +18,9 @@ jobs:
           distribution: temurin
           java-version: 17
 
+      - name: Install sbt
+        uses: coursier/setup-action@v1
+
       - name: Cache sbt
         uses: actions/cache@v3
         with:
