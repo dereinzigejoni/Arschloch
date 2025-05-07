@@ -6,7 +6,8 @@ version := "0.1.0"
 enablePlugins(scoverage.ScoverageSbtPlugin)
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.19" % Test
 coverageEnabled := true
-
+coverageMinimumBranchTotal:= 70
+coverageFailOnMinimum := true
 
 
 
