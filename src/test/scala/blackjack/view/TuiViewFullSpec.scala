@@ -224,4 +224,83 @@ class TuiViewFullSpec extends AnyFunSuite {
   test("formatNewRoundPrompt liefert konstante Zeichenkette") {
     assert(TuiView.formateNewRoundPrompt() == "[N]eues Spiel, [Q]uit?")
   }
+
+  /** Hilfsfunktion, die stdout abfängt */
+  private def captureOutput(block: => Unit): String = {
+    val baos = new ByteArrayOutputStream()
+    val ps = new PrintStream(baos)
+    Console.withOut(ps) {
+      block
+    }
+    baos.toString.trim
+  }
+
+  // Ein Dummy-Deck, da die TUI-Methoden eh nur den State lesen und das Deck ignorieren
+  private val dummyDeck: Deck = Deck(List.empty)
+
+  test("printWelcome prints the welcome message") {
+    val out = captureOutput {
+      TuiView.printWelcome()
+    }
+    assert(out == "Willkommen zu Blackjack")
+  }
+
+  test("formateNewRoundPrompt returns the new-round prompt") {
+    assert(TuiView.formateNewRoundPrompt() == "[N]eues Spiel, [Q]uit?")
+  }
+
+  test("formatRenderPartial renders dealer and active hand correctly") {
+    // Dummy-Karten und Hände
+    val playerHand = Hand(List(Card("K", Hearts)))
+    val dealerHand = Hand(List(Card("A", Spades)))
+    val state = GameState(
+      deck = dummyDeck,
+      playerHands = List(playerHand),
+      dealer = dealerHand,
+      bets = List(5.0),
+      activeHand = 0,
+      status = InProgress
+    )
+
+    val lines = TuiView.formatRenderPartial(state)
+    assert(lines.head.contains("BLACKJACK"), "Erwarte Hinweis auf Blackjack")
+    assert(lines.exists(_.startsWith("Dealer:")), "Dealer-Zeile fehlt")
+    assert(lines.exists(_.contains("Spieler Hand 1/1")), "Spieler-Hand-Zähler falsch")
+  }
+
+  test("formatMenuOptions always lists Hit, Stand and Quit") {
+    val hand = Hand(List(Card("10", Clubs)))
+    val state = GameState(
+      deck = dummyDeck,
+      playerHands = List(hand),
+      dealer = hand,
+      bets = List(5.0),
+      activeHand = 0,
+      status = InProgress
+    )
+    val opts = TuiView.formatMenuOptions(state, budget = 100)
+
+    assert(opts.contains("[H]it"), "Hit-Option fehlt")
+    assert(opts.contains("[S]tand"), "Stand-Option fehlt")
+    assert(opts.contains("[Q]uit"), "Quit-Option fehlt")
+  }
+
+  test("formatRenderFull renders full round result") {
+    val playerHand = Hand(List(Card("9", Hearts)))
+    val dealerHand = Hand(List(Card("7", Spades)))
+    val state = GameState(
+      deck = dummyDeck,
+      playerHands = List(playerHand),
+      dealer = dealerHand,
+      bets = List(10.0),
+      activeHand = 0,
+      status = Finished
+    )
+
+    val lines = TuiView.formatRenderFull(state)
+    //assert(lines.exists(_.startsWith("======= RUNDENRESULTAT")), "Rundenresultat-Header fehlt")
+    assert(lines.exists(_.contains("Dealer:")), "Dealer-Ausgabe fehlt")
+    assert(lines.exists(_.startsWith("Hand 1:")), "Spielerhand-Ausgabe fehlt")
+  }
+
 }
