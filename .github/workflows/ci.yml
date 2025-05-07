@@ -1,3 +1,5 @@
+# .github/workflows/ci.yml
+
 name: CI
 
 on:
@@ -9,19 +11,20 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
+      # 1) Checkout your repository
       - uses: actions/checkout@v3
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v3
+      # 2) Install Java 17 and sbt
+      - name: Setup Java & sbt
+        uses: olafurpg/setup-scala@v10
         with:
-          distribution: temurin
-          java-version: 17
+          java-version: "17"
+          sbt-version: "1.9.0"
 
-      - name: Install sbt
-        uses: coursier/setup-action@v1
-
-      - name: Cache sbt
+      # 3) Cache sbt artifacts for faster builds
+      - name: Cache sbt directories
         uses: actions/cache@v3
         with:
           path: |
@@ -29,12 +32,11 @@ jobs:
             ~/.sbt
           key: ${{ runner.os }}-sbt-${{ hashFiles('**/build.sbt') }}
 
-      - name: Run sbt tests
+      # 4) Run compilation, tests and coverage
+      - name: Run sbt clean, tests & coverage
         run: sbt clean coverage test
 
-      - name: Generate coverage report
-        run: sbt coverageReport coverageAggregate
-
+      # 5) Publish coverage report to Coveralls
       - name: Publish coverage to Coveralls
         uses: coverallsapp/github-action@v2
         with:
