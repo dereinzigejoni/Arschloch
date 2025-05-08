@@ -1,0 +1,6 @@
+# .coveralls.yml
+service_name: github
+repo_token: ${COVERALLS_REPO_TOKEN}  # Optional, wird per GITHUB_TOKEN abgelöst
+coverage_reports:
+  - target/scala-*/scoverage-report/*.xml
+
