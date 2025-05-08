@@ -1,6 +1,7 @@
 # Blackjack 
-![CI](https://github.com/dereinzigejoni/Blackjack/actions/workflows/coveralls.yml/badge.svg)
-[![Coverage](https://coveralls.io/repos/github/dereinzigejoni/Blackjack/badge.svg?branch=main)](https://coveralls.io/github/dereinzigejoni/Blackjack?branch=main)
+# DAS einzig Tolle SE Projekt YEYYYYY
+# coverage: [![Coverage](https://coveralls.io/repos/github/dereinzigejoni/Blackjack/badge.svg?branch=main)](https://coveralls.io/github/dereinzigejoni/Blackjack?branch=main)
+# CI: ![CI](https://github.com/dereinzigejoni/Blackjack/actions/workflows/coveralls.yml/badge.svg)
 
 Ein Blackjack in Scala yey :)
 
