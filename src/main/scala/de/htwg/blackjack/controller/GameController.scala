@@ -1,16 +1,12 @@
-// src/main/scala/blackjack/controller/GameController.scala
 package de.htwg.blackjack.controller
-
 import de.htwg.blackjack.model._
-
+import scala.compiletime.uninitialized
 class GameController {
   private var budget: Double     = 4000.0
   private var currentBet: Double = 0.0
-  private var state: GameState  = _
-
+  private var state: GameState  = uninitialized
   def getBudget: Double = budget
   def getState: GameState = state
-
   def placeBet(bet: Double): Unit = {
     if (bet <= 0) throw new IllegalArgumentException("Einsatz muss > 0 sein")
     if (bet > budget * 0.9) throw new IllegalArgumentException(f"einsatz muss <= 90%% deines Budgets (max:${budget * 0.9}%.2f sein")
@@ -18,7 +14,6 @@ class GameController {
     budget -= bet
     state = initRound(bet)
   }
-
   private def initRound(bet: Double): GameState = {
     val deck0 = Deck.fresh()
     // Ziehe p1, d1, p2, d2 …
@@ -37,8 +32,6 @@ class GameController {
       status     = InProgress
     )
   }
-
-  /** HIT auf aktive Hand */
   def playerHit(): Unit = {
     if (state.status == InProgress) {
       val (card, d2) = state.deck.draw()
@@ -48,16 +41,12 @@ class GameController {
       state = state.copy(deck=d2,playerHands = state.playerHands.updated(idx,newHand),status = newStatus)
     }
   }
-
-  /** DOUBLE DOWN: setzt nochmal den gleichen Bet, bekommt genau eine Karte und steht */
   def playerDouble(): Unit = {
     val idx = state.activeHand
     val bet = state.bets(idx)
     if (state.playerHands(idx).cards.size == 2 && budget >= bet) {
-      // Budget abbuchen und Bet verdoppeln
       budget -= bet
       val newBets = state.bets.updated(idx, bet * 2)
-      // Genau einen Hit, dann automatisch Stand für diese Hand
       val (card, d2) = state.deck.draw()
       val newHand    = state.playerHands(idx).add(card)
       state = state.copy(
@@ -68,18 +57,14 @@ class GameController {
       nextOrDealer()
     }
   }
-
-  /** SPLIT: wenn die ersten beiden Karten gleichen Rang haben */
   def playerSplit(): Unit = {
     val idx = state.activeHand
     val hand = state.playerHands(idx)
-    if (hand.cards.size == 2 && hand.cards(0).rank == hand.cards(1).rank) {
+    if (hand.cards.size == 2 && hand.cards.head.rank == hand.cards(1).rank) {
       val bet = state.bets(idx)
       require(budget >= bet, "Nicht genug Budget zum Splitten")
-      // Budget abbuchen, Bet-Liste verdoppeln
       budget -= bet
       val (c1 :: c2 :: Nil) = hand.cards
-      // Erstelle zwei neue Hände, ziehe jeweils eine Karte
       val (cardA, d2) = state.deck.draw()
       val (cardB, d3) = d2.draw()
       val h1 = Hand.empty.add(c1).add(cardA)
@@ -91,14 +76,9 @@ class GameController {
         playerHands = newHands,
         bets        = newBets
       )
-      // activeHand bleibt idx → spiele zuerst h1, dann per nextOrDealer h2
     }
   }
-
-  /** Stand auf aktiver Hand: wechsle Hand oder starte Dealerzug */
   def playerStand(): Unit = nextOrDealer()
-
-  /** wechselt zur nächsten Hand oder startet DealerPlay */
   private def nextOrDealer(): Unit = {
     val next = state.activeHand + 1
     if (next < state.playerHands.size) {
@@ -107,7 +87,6 @@ class GameController {
       dealerPlay()
     }
   }
-
   private def dealerPlay(): Unit = {
     var deck2 = state.deck
     var dHand = state.dealer
@@ -119,26 +98,19 @@ class GameController {
     val st = if (dHand.isBust) DealerBust else Finished
     state = state.copy(deck = deck2, dealer = dHand, status = st)
   }
-
-  /** Wie gehabt: nach DealerPlay auszahlen, aber über alle Hände iterieren */
   def resolveBet(): Unit = {
     val finalState = state
-    // Für jede Hand einzelne Auszahlung
     val payouts = finalState.playerHands.zip(finalState.bets).map {
       case (hand, bet) =>
         finalState.status match {
-          case DealerBust                       => if (isNatural(hand)) 2.7 * bet else 2.0 * bet
-          case Finished if hand.value > finalState.dealer.value =>
-            if (isNatural(hand)) 2.7 * bet else 2.0 * bet
+          case DealerBust => if (isNatural(hand)) 2.7 * bet else 2.0 * bet
+          case Finished if hand.value > finalState.dealer.value => if (isNatural(hand)) 2.7 * bet else 2.0 * bet
           case Finished if hand.value == finalState.dealer.value => 1.0 * bet
           case _ => 0.0
         }
     }
-    // Summe aller Payouts plus Rückgabe der ursprünglichen Bets
     budget += payouts.sum
     currentBet = 0.0
   }
-
-  private def isNatural(hand: Hand): Boolean =
-    hand.cards.size == 2 && hand.value == 21
+  private def isNatural(hand: Hand): Boolean = hand.cards.size == 2 && hand.value == 21
 }
