@@ -8,9 +8,6 @@ libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.19" % Test
 coverageEnabled := true
 coverageMinimumBranchTotal:= 70
 coverageFailOnMinimum := true
-coverageEnabled := true
-coverageOutputXML := true
-coverageOutputCobertura := true
 
 
 
