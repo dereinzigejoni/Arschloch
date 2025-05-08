@@ -302,5 +302,36 @@ class TuiViewFullSpec extends AnyFunSuite {
     assert(lines.exists(_.contains("Dealer:")), "Dealer-Ausgabe fehlt")
     assert(lines.exists(_.startsWith("Hand 1:")), "Spielerhand-Ausgabe fehlt")
   }
+  test("ohne Double und Split nur Hit, Stand, Quit") {
+    val hand = Hand.empty.add(Card("2", Hearts)).add(Card("3", Clubs))
+    val state = mkState(List(hand), Hand.empty, List(10.0), InProgress)
+    val budget = 5.0 // < bet ⇒ kein Double
+    val opts = TuiView.formatMenuOptions(state, budget)
+    assert(opts == Seq("[H]it", "[S]tand", "[Q]uit"))
+  }
 
+  test("wenn Budget ≥ Bet dann erscheint [D]ouble") {
+    val hand = Hand.empty.add(Card("2", Hearts)).add(Card("3", Clubs))
+    val state = mkState(List(hand), Hand.empty, List(10.0), InProgress)
+    val budget = 10.0
+    val opts = TuiView.formatMenuOptions(state, budget)
+    assert(opts.contains("[D]ouble"))
+    assert(!opts.contains("[P]split"))
+  }
+
+  test("bei Paar-Karten erscheint [P]split") {
+    val hand = Hand.empty.add(Card("5", Hearts)).add(Card("5", Diamonds))
+    val state = mkState(List(hand), Hand.empty, List(20.0), InProgress)
+    val budget = 20.0
+    val opts = TuiView.formatMenuOptions(state, budget)
+    assert(opts.contains("[P]split"))
+  }
+
+  test("bei Paar und genug Budget erscheinen beide Optionen") {
+    val hand   = Hand.empty.add(Card("6", Spades)).add(Card("6", Clubs))
+    val state  = mkState(List(hand), Hand.empty, List(30.0), InProgress)
+    val budget = 30.0
+    val opts   = TuiView.formatMenuOptions(state, budget)
+    assert(opts == Seq("[H]it", "[S]tand","[Q]uit", "[D]ouble", "[P]split"))
+  }
 }
