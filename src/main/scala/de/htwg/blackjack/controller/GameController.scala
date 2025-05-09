@@ -90,7 +90,7 @@ class GameController {
   private def dealerPlay(): Unit = {
     var deck2 = state.deck
     var dHand = state.dealer
-    while (dHand.value < 17) {
+    while (dHand.value <= 17) {
       val (c, nd) = deck2.draw()
       dHand = dHand.add(c)
       deck2 = nd

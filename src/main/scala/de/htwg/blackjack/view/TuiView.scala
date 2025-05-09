@@ -44,7 +44,7 @@ object TuiView {
       else Nil
     val spl =
       if (hand.cards.size == 2
-        && hand.cards(0).rank == hand.cards(1).rank
+        && hand.cards.head.rank == hand.cards(1).rank
         && budget >= state.bets(idx)) Seq("[P]split")
       else Nil
 
