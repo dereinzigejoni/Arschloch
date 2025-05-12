@@ -40,11 +40,11 @@ object TuiView {
     val hand = state.playerHands(idx)
     val base = Seq("[H]it", "[S]tand", "[Q]uit")
     val dbl =
-      if (hand.cards.size == 2 && budget >= state.bets(idx)) Seq("[D]ouble")
+      if (hand.cards.size == 2) Seq("[D]ouble")
       else Nil
     val spl =
       if (hand.cards.size == 2
-        && hand.cards.head.rank == hand.cards(1).rank
+        && hand.cards.head.value == hand.cards(1).value
         && budget >= state.bets(idx)) Seq("[P]split")
       else Nil
 
@@ -59,7 +59,6 @@ object TuiView {
       var inRound = true
       while (inRound) {
         renderPartial()
-        // Menü dynamisch je nach Splitt-/Double-Möglichkeit
         val st    = controller.getState
         val hand  = st.playerHands(st.activeHand)
         println(formatMenuOptions(controller.getState, controller.getBudget).mkString(" ", " ", ""))
@@ -79,6 +78,7 @@ object TuiView {
       renderFull()
       controller.resolveBet()
       println(f"Dein aktuelles Budget: ${controller.getBudget}%.2f")
+      // "Dein Aktuelles Buget getBudget * 2 bei option Double
       println(formateNewRoundPrompt())
       scala.io.StdIn.readLine().toUpperCase match {
         case "N" => // weiter
@@ -131,7 +131,7 @@ object TuiView {
     // Ergebnis pro Hand
     val resultLines = state.playerHands.zip(state.bets).map { case (h, bet) =>
       state.status match {
-        case PlayerBust if state.activeHand == 0 /*nur erste Hand verliert*/ =>
+        case PlayerBust if state.activeHand == 0 && h.value > 21  /*nur erste Hand verliert*/ =>
           "Du bist Bust – Dealer gewinnt."
         case DealerBust =>
           "Dealer ist Bust – Du gewinnst!"
