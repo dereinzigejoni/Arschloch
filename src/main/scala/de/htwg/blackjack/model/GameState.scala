@@ -1,6 +1,8 @@
 // src/main/scala/blackjack/model/GameState.scala
 package de.htwg.blackjack.model
 
+import de.htwg.blackjack.state.GamePhase
+
 sealed trait Status
 case object InProgress    extends Status
 case object PlayerBust    extends Status
@@ -9,9 +11,12 @@ case object Finished      extends Status
 
 case class GameState(
                       deck: Deck,
-                      playerHands: List[Hand],     // jetzt eine Liste von Händen
+                      playerHands: List[Hand],
                       dealer: Hand,
-                      bets: List[Double],          // parallele Liste von Bets
-                      activeHand: Int,             // Index der gerade gespielten Hand
-                      status: Status
+                      bets: List[Double],
+                      activeHand: Int,
+                      phase: GamePhase,
+                      budget: Double,
+                      currentBet: Double
                     )
+

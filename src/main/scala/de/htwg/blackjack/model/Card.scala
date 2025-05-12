@@ -15,7 +15,7 @@ enum Rank(val symbol: String, val value: Int):
   case King extends Rank("K", 10)
   case Ace extends Rank("A", 11)
   
-enum Suits(val suit: String):
+enum Suits(val symbol: String):
   case Heart extends Suits("♥")
   case Diamonds extends Suits("♦")
   case Clubs extends Suits("♣")
@@ -25,4 +25,4 @@ enum Suits(val suit: String):
 case class Card(rank: Rank, suit: Suits):
   def value: Int = rank.value
 
-  override def toString: String = s"${rank.symbol}$suit"
+  override def toString: String = s"${suit.symbol}${rank.symbol}"
