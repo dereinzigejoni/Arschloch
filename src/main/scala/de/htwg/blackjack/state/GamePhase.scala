@@ -85,7 +85,7 @@ object GamePhases {
     }
   }
 
-  private case object DealerTurn extends GamePhase {
+   case object DealerTurn extends GamePhase {
     def hit(gs: GameState): GameState = gs
     def stand(gs: GameState): GameState = {
       var deck = gs.deck
@@ -151,7 +151,7 @@ object GamePhases {
       )
     }
 
-    private def isNatural(hand: Hand): Boolean =
+     def isNatural(hand: Hand): Boolean =
       hand.cards.size == 2 && hand.value == 21
   }
   

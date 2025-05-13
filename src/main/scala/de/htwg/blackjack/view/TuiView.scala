@@ -1,9 +1,10 @@
 // src/main/scala/de/htwg/blackjack/view/TuiView.scala
 package de.htwg.blackjack.view
 
+import scala.util.{Failure, Success, Try}
 import de.htwg.blackjack.controller.GameController
-import de.htwg.blackjack.model._
-import de.htwg.blackjack.state.GamePhases._
+import de.htwg.blackjack.model.*
+import de.htwg.blackjack.state.GamePhases.*
 
 object TuiView {
 
@@ -34,10 +35,33 @@ object TuiView {
         renderPartial()
         printMenu()
         scala.io.StdIn.readLine().trim.toUpperCase match {
-          case "H" => controller.playerHit()
-          case "S" => controller.playerStand()
-          case "D" => controller.playerDouble()
-          case "P" => controller.playerSplit()
+          case "H" => controller.playerHit() match {
+            case Failure(ex) => println(s"Fehler beim Hit: ${ex.getMessage}")
+            case Success(_)  => // normal weiter
+          }
+          case "S" =>
+            controller.playerStand() match {
+              case Failure(ex) => println(s"Fehler beim Stand: ${ex.getMessage}")
+              case Success(_)  => // weiter
+            }
+          case "D" =>
+            controller.playerDouble() match {
+              case Failure(ex) => println(s"Fehler beim Double: ${ex.getMessage}")
+              case Success(_)  => // weiter
+            }
+          case "P" =>
+            controller.playerSplit() match {
+              case Failure(ex) => println(s"Fehler beim Split: ${ex.getMessage}")
+              case Success(_)  => // weiter
+            }
+          case "U" =>
+            controller.undo() match {
+              case Some(_) =>
+                println("Letzter Schritt wurde rückgängig gemacht.")
+                renderPartial()
+              case None =>
+                println("Nichts zum Rückgängig machen.")
+            }
           case "Q" =>
             println("\nAuf Wiedersehen!")
             sys.exit(0)
@@ -69,50 +93,68 @@ object TuiView {
     }
   }
 
-  private def askBet(): Unit = {
+   def askBet(): Unit = {
     var valid = false
     while (!valid) {
       val budget = controller.getBudget
       val maxBet = budget * 0.9
-      println(hBorder())
-      println(f"Budget: €$budget%.2f   Max-Einsatz: €$maxBet%.2f")
-      print("Einsatz eingeben (H = Quit): ")
-      scala.io.StdIn.readLine().trim.toUpperCase match {
-        case "H" =>
-          println("\nAuf Wiedersehen!")
+      println(f"Dein Budget: €$budget%.2f – Maximaler Einsatz: €$maxBet%.2f")
+      print("Bitte deinen Einsatz eingeben (H für Quit): ")
+      scala.io.StdIn.readLine() match {
+        case inp if inp.equalsIgnoreCase("H") =>
+          println("Auf Wiedersehen!")
           sys.exit(0)
         case inp =>
-          parseBetInput(inp, controller.getBudget) match {
-            case Left(err)  => println(s"Fehler: $err")
-            case Right(bet) =>
+          Try(inp.toDouble).toOption match {
+            case Some(bet) if bet > 0 && bet <= maxBet =>
               controller.placeBet(bet)
               valid = true
+            case Some(_) =>
+              println("Einsatz muss > 0 und ≤ 90% deines Budgets sein.")
+            case None =>
+              println("Bitte eine Zahl eingeben.")
           }
       }
     }
   }
 
-  private def printMenu(): Unit = {
+
+   def printMenu(): Unit = {
     val opts = formatMenuOptions(controller.getState, controller.getBudget)
     println("\n" + opts.mkString(" | "))
   }
 
-  private def renderPartial(): Unit = {
+  // Vorher: def renderPartial(): Unit
+  def renderPartial(): Seq[String] = {
     val state = controller.getState
-    println("\n" + hBorder())
-    println(padCenter("DEINE HAND"))
-    println(hBorder())
-    // Dealer zeigt nur die erste Karte
-    val dFirst = state.dealer.cards.head
-    println(s"Dealer: ${dFirst} [???]")
-    // Spieler: alle Karten
-    val hand = state.playerHands(state.activeHand)
-    val cardsStr = hand.cards.mkString(" ")
-    println(s"Spieler (${state.activeHand + 1}/${state.playerHands.size}): $cardsStr (Wert: ${hand.value})")
-    println(hBorder())
+
+    // 1) Erzeuge alle Zeilen als Seq[String]
+    val border     = hBorder()
+    val header     = padCenter("DEINE HAND")
+    val dFirst     = state.dealer.cards.head
+    val dealerLine = s"Dealer: $dFirst [???]"
+    val hand       = state.playerHands(state.activeHand)
+    val cardsStr   = hand.cards.mkString(" ")
+    val playerLine = s"Spieler (${state.activeHand + 1}/${state.playerHands.size}): $cardsStr (Wert: ${hand.value})"
+
+    val lines = Seq(
+      "",                       // fürs Leading Newline
+      border,
+      header,
+      border,
+      dealerLine,
+      playerLine,
+      border
+    )
+
+    // 2) Drucke sie als Side-Effect
+    lines.foreach(println)
+
+    // 3) Gib sie zurück für Tests
+    lines
   }
 
-  private def renderFull(): Unit = {
+   def renderFull(): Unit = {
     val state = controller.getState
     println("\n" + hBorder())
     println(padCenter("ERGEBNISSE DER RUNDE"))
@@ -160,7 +202,7 @@ object TuiView {
     val idx  = state.activeHand
     val hand = state.playerHands(idx)
 
-    val base = Seq("[H]it", "[S]tand", "[Q]uit")
+    val base = Seq("[H]it", "[S]tand","[U]ndo", "[Q]uit")
     val dbl  = if (hand.cards.size == 2 && budget >= state.bets(idx)) Seq("[D]ouble") else Nil
     val spl  = if (
       hand.cards.size == 2 &&
