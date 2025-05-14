@@ -1,5 +1,5 @@
 package de.htwg.blackjack.state
-import de.htwg.blackjack.model.{GameState, Hand}
+import de.htwg.blackjack.model.{GameState, Hand, Rank}
 
 sealed trait GamePhase {
   def hit (gs: GameState): GameState
@@ -151,8 +151,15 @@ object GamePhases {
       )
     }
 
-     def isNatural(hand: Hand): Boolean =
-      hand.cards.size == 2 && hand.value == 21
+    def isNatural(hand: Hand): Boolean = {
+      hand.cards match {
+        case List(c1, c2) =>
+          (c1.rank == Rank.Ace && c2.rank == Rank.King) ||
+            (c1.rank == Rank.King && c2.rank == Rank.Ace)
+        case _ => false
+      }
+    }
+
   }
   
   case object PlayerBustPhase extends GamePhase{

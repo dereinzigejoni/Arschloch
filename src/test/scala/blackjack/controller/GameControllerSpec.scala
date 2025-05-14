@@ -1,6 +1,7 @@
 // src/test/scala/de/htwg/blackjack/controller/GameControllerSpec.scala
-package de.htwg.blackjack.controller
+package blackjack.controller
 
+import de.htwg.blackjack.controller.GameController
 import org.scalatest.funsuite.AnyFunSuite
 import de.htwg.blackjack.model.*
 import de.htwg.blackjack.state.GamePhase

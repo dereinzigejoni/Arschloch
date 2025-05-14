@@ -76,7 +76,7 @@ class GameController(dealerStrat: DealerStrategy = new ConservativeDealer) {
       bets = List(bet),
       activeHand = 0,
       phase = PlayerTurn,
-      budget = budget - bet,
+      budget = budget ,
       currentBet = bet
     )
 
@@ -89,7 +89,12 @@ class GameController(dealerStrat: DealerStrategy = new ConservativeDealer) {
 
 
   private def dealerPlay(): Unit = state = state.phase.stand(state)
-  def resolveBet(): Unit = state = GamePhases.Payout(state).pay(state)
+
+  def resolveBet(): Unit = {
+    val newState = GamePhases.Payout(state).pay(state)
+    state = newState
+    budget = newState.budget // Controller-Budget auf den neuen Stand setzen
+  }
 
 
 }
