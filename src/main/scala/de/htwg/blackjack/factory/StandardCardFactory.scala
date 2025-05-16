@@ -4,6 +4,5 @@ object StandardCardFactory {
   val allRanks: Seq[Rank] = Rank.values.toSeq
   val allSuits: Seq[Suits] = Suits.values.toSeq
 
-  def createCard(rank: Rank, suit: Suits): Card =
-    Card(rank, suit)
+  def createCard(rank: Rank, suit: Suits): Card = Card(rank, suit)
 }

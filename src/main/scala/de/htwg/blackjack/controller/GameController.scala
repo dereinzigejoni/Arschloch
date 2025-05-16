@@ -13,7 +13,7 @@ class GameController(dealerStrat: DealerStrategy = new ConservativeDealer) {
   private var currentBet: Double = 0.0
   private var state: GameState  = uninitialized
   private var history: List[(GameState, Double, Command)] = Nil
-  private var invoker = new CommandInvoker(this)
+  private val invoker = new CommandInvoker(this)
   def setStateInternal(gs: GameState): Unit = state = gs
   def getBudget: Double = budget
   def getState: GameState = state
