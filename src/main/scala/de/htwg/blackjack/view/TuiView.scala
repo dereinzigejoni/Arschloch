@@ -7,22 +7,18 @@ import de.htwg.blackjack.model.*
 import de.htwg.blackjack.state.GamePhases.*
 
 object TuiView {
-
   private val controller = new GameController()
-
   private val lineWidth = 40
   private def hBorder(c: Char = '='): String = c.toString * lineWidth
   private def padCenter(text: String): String = {
     val padding = (lineWidth - text.length) / 2
     " " * padding + text + " " * (lineWidth - text.length - padding)
   }
-
   def printWelcome(): Unit = {
     println(hBorder())
     println(padCenter("WILLKOMMEN ZU BLACKJACK"))
     println(hBorder())
   }
-
   private def processChoice(choice: String): Unit = Option(choice) match {
     case Some("H") => wrap(controller.playerHit(), "Hit")
     case Some("S") => wrap(controller.playerStand(), "Stand")
@@ -41,14 +37,10 @@ object TuiView {
     case _ =>
       println("Ungültige Eingabe. Bitte H, S, D, P, U, R oder Q.")
   }
-
-  /** Wrapper für Try[GameState]-Aufrufe */
   private def wrap(t: Try[GameState], action: String): Unit = t match {
     case Success(_) => () // alles gut, einfach weiter
     case Failure(ex) => println(s"Fehler bei $action: ${ex.getMessage}")
   }
-
-
   def run(): Unit = {
     printWelcome()
     var playing = true
@@ -66,14 +58,10 @@ object TuiView {
         }
       }
 
-      // Dealer- und Payout-Phase
       controller.playerStand()
       controller.resolveBet()
-
       renderFull()
       println(f"\nDein aktuelles Budget: €${controller.getBudget}%.2f\n")
-
-      // Neustart oder Ende
       println(hBorder('-'))
       println(padCenter("[N] Neues Spiel    [Q] Quit"))
       println(hBorder('-'))
@@ -88,7 +76,6 @@ object TuiView {
       }
     }
   }
-
   def askBet(): Unit = {
     var valid = false
     while (!valid) {
