@@ -1,14 +1,13 @@
 package de.htwg.blackjack.controller
-import de.htwg.blackjack.command.{Command, CommandInvoker, DoubleCommand, HitCommand, SplitCommand, StandCommand}
+import de.htwg.blackjack.command.*
 import de.htwg.blackjack.factory.StandardDeckFactory
 import de.htwg.blackjack.model.*
 import de.htwg.blackjack.state.GamePhases
 import de.htwg.blackjack.state.GamePhases.PlayerTurn
 import de.htwg.blackjack.strategy.ConservativeDealer
 import de.htwg.blackjack.strategy.interfacE.DealerStrategy
-
 import scala.compiletime.uninitialized
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 class GameController(dealerStrat: DealerStrategy = new ConservativeDealer) {
   private var budget: Double     = 4000.0
   private var currentBet: Double = 0.0
@@ -24,7 +23,6 @@ class GameController(dealerStrat: DealerStrategy = new ConservativeDealer) {
     val oldState = state
     val oldBudget = state.budget
     cmd.execute(state).map { newState =>
-        // 1) Alter Zustand in History speichern
       history = (oldState, oldBudget, cmd) :: history
       state = newState
       newState
@@ -58,6 +56,7 @@ class GameController(dealerStrat: DealerStrategy = new ConservativeDealer) {
     )
 
   }
+  def tryPlaceBet(bet: Double): Try[Unit] = Try(placeBet(bet))
   def playerHit(): Try[GameState] = invoker.execute(HitCommand)
   def playerStand(): Try[GameState] = invoker.execute(StandCommand)
   def playerDouble(): Try[GameState] = invoker.execute(DoubleCommand)

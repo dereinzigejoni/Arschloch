@@ -1,15 +1,12 @@
 package de.htwg.blackjack.state
 import de.htwg.blackjack.model.{GameState, Hand, Rank}
-
 sealed trait GamePhase {
   def hit (gs: GameState): GameState
   def stand(gs: GameState): GameState
   def double(gs: GameState): GameState
   def split(gs: GameState): GameState
 }
-
 object GamePhases {
-
   case object PlayerTurn extends GamePhase {
     def hit(gs: GameState): GameState = {
       val (card, d2) = gs.deck.draw()
@@ -18,13 +15,11 @@ object GamePhases {
       val newPhase = if (newHand.isBust) DealerTurn else PlayerTurn
       gs.copy(deck = d2, playerHands = gs.playerHands.updated(idx, newHand), phase = newPhase)
     }
-
     def stand(gs: GameState): GameState =
       if (gs.activeHand + 1 < gs.playerHands.size)
         gs.copy(activeHand = gs.activeHand + 1)
       else
         gs.copy(phase = DealerTurn)
-
     def double(gs: GameState): GameState = {
       val idx = gs.activeHand
       val bet = gs.bets(idx)
@@ -51,7 +46,6 @@ object GamePhases {
         )
       } else gs
     }
-
     def split(gs: GameState): GameState = {
       val idx = gs.activeHand
       val hand = gs.playerHands(idx)
@@ -83,8 +77,7 @@ object GamePhases {
       } else gs
     }
   }
-
-   case object DealerTurn extends GamePhase {
+  case object DealerTurn extends GamePhase {
     def hit(gs: GameState): GameState = gs
     def stand(gs: GameState): GameState = {
       var deck = gs.deck
@@ -105,27 +98,23 @@ object GamePhases {
     def double(gs: GameState): GameState = gs
     def split(gs: GameState): GameState = gs
   }
-
-   case object DealerBustPhase extends GamePhase {
+  case object DealerBustPhase extends GamePhase {
     def hit(gs: GameState): GameState = gs
     def stand(gs: GameState): GameState = gs
     def double(gs: GameState): GameState = gs
     def split(gs: GameState): GameState = gs
   }
-
-   case object FinishedPhase extends GamePhase {
+  case object FinishedPhase extends GamePhase {
     def hit(gs: GameState): GameState = gs
     def stand(gs: GameState): GameState = gs
     def double(gs: GameState): GameState = gs
     def split(gs: GameState): GameState = gs
   }
-
   case class Payout(oldState: GameState) extends GamePhase {
     def hit(gs: GameState): GameState = gs
     def stand(gs: GameState): GameState = gs
     def double(gs: GameState): GameState = gs
     def split(gs: GameState): GameState = gs
-
     def pay(gs: GameState): GameState = {
       val payouts = oldState.playerHands
         .zip(oldState.bets)
@@ -149,8 +138,7 @@ object GamePhases {
         phase      = GameOver
       )
     }
-
-    def isNatural(hand: Hand): Boolean = {
+    private def isNatural(hand: Hand): Boolean = {
       hand.cards match {
         case List(c1, c2) =>
           (c1.rank == Rank.Ace && c2.rank == Rank.King) ||
@@ -158,22 +146,18 @@ object GamePhases {
         case _ => false
       }
     }
-
   }
-  
   case object PlayerBustPhase extends GamePhase{
     def hit(gs: GameState): GameState = gs
     def stand(gs: GameState): GameState = gs
     def double(gs: GameState): GameState = gs
     def split(gs: GameState): GameState = gs
   }
-
-   case object GameOver extends GamePhase {
+  case object GameOver extends GamePhase {
     def hit(gs: GameState): GameState = gs
     def stand(gs: GameState): GameState = gs
     def double(gs: GameState): GameState = gs
     def split(gs: GameState): GameState = gs
   }
-
 }
 
