@@ -62,6 +62,14 @@ object TuiView {
               case None =>
                 println("Nichts zum Rückgängig machen.")
             }
+          case "R" =>
+            controller.redo() match {
+              case Some(_) =>
+                println("Schritt wiederhergestellt.")
+                renderPartial()
+              case None =>
+                println("Nichts zum Wiederherstellen.")
+            }
           case "Q" =>
             println("\nAuf Wiedersehen!")
             sys.exit(0)
@@ -93,7 +101,7 @@ object TuiView {
     }
   }
 
-   def askBet(): Unit = {
+  def askBet(): Unit = {
     var valid = false
     while (!valid) {
       val budget = controller.getBudget
@@ -117,18 +125,12 @@ object TuiView {
       }
     }
   }
-
-
-   def printMenu(): Unit = {
+  def printMenu(): Unit = {
     val opts = formatMenuOptions(controller.getState, controller.getBudget)
     println("\n" + opts.mkString(" | "))
   }
-
-  // Vorher: def renderPartial(): Unit
   def renderPartial(): Seq[String] = {
     val state = controller.getState
-
-    // 1) Erzeuge alle Zeilen als Seq[String]
     val border     = hBorder()
     val header     = padCenter("DEINE HAND")
     val dFirst     = state.dealer.cards.head
@@ -138,7 +140,7 @@ object TuiView {
     val playerLine = s"Spieler (${state.activeHand + 1}/${state.playerHands.size}): $cardsStr (Wert: ${hand.value})"
 
     val lines = Seq(
-      "",                       // fürs Leading Newline
+      "",                       
       border,
       header,
       border,
@@ -146,15 +148,10 @@ object TuiView {
       playerLine,
       border
     )
-
-    // 2) Drucke sie als Side-Effect
     lines.foreach(println)
-
-    // 3) Gib sie zurück für Tests
     lines
   }
-
-   def renderFull(): Unit = {
+  def renderFull(): Unit = {
     val state = controller.getState
     println("\n" + hBorder())
     println(padCenter("ERGEBNISSE DER RUNDE"))
@@ -185,7 +182,6 @@ object TuiView {
 
     println("\n" + hBorder('-'))
   }
-
   def parseBetInput(input: String, budget: Double): Either[String, Double] = {
     if (input.equalsIgnoreCase("H")) Left("QUIT")
     else scala.util.Try(input.toDouble).toOption match {
@@ -196,13 +192,11 @@ object TuiView {
       case Some(bet)            => Right(bet)
     }
   }
-
-  /** Menü-Optionen (keine I/O) */
   def formatMenuOptions(state: GameState, budget: Double): Seq[String] = {
     val idx  = state.activeHand
     val hand = state.playerHands(idx)
 
-    val base = Seq("[H]it", "[S]tand","[U]ndo", "[Q]uit")
+    val base = Seq("[H]it", "[S]tand","[U]ndo","[R]edo","[Q]uit")
     val dbl  = if (hand.cards.size == 2 && budget >= state.bets(idx)) Seq("[D]ouble") else Nil
     val spl  = if (
       hand.cards.size == 2 &&

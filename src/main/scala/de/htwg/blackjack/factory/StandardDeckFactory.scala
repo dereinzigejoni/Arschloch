@@ -8,6 +8,7 @@ object StandardDeckFactory extends DeckFactory {
   def newDeck: Deck = Deck.shuffled(buildDeck(StandardCardFactory.allRanks.toList, StandardCardFactory.allSuits.toList))
 
   private def buildDeck(ranks: List[Rank], suits: List[Suits]): List[Card] = {
+    @tailrec
     def combine(rs: List[Rank], acc: List[Card]): List[Card] = rs match {
       case Nil => acc
       case r :: rest =>

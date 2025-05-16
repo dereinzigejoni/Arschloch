@@ -6,7 +6,6 @@ sealed trait GamePhase {
   def stand(gs: GameState): GameState
   def double(gs: GameState): GameState
   def split(gs: GameState): GameState
-  //def end(gs: GameState): GameState
 }
 
 object GamePhases {
@@ -132,9 +131,9 @@ object GamePhases {
         .zip(oldState.bets)
         .map { case (hand, bet) =>
           val multiplier = oldState.phase match {
-            case DealerBustPhase =>
+            case DealerBustPhase if !hand.isBust =>
               if (isNatural(hand)) 2.7 else 2.0
-            case FinishedPhase if hand.value > oldState.dealer.value =>
+            case FinishedPhase if !hand.isBust && hand.value > oldState.dealer.value =>
               if (isNatural(hand)) 2.7 else 2.0
             case FinishedPhase if hand.value == oldState.dealer.value =>
               1.0
@@ -164,11 +163,8 @@ object GamePhases {
   
   case object PlayerBustPhase extends GamePhase{
     def hit(gs: GameState): GameState = gs
-
     def stand(gs: GameState): GameState = gs
-
     def double(gs: GameState): GameState = gs
-
     def split(gs: GameState): GameState = gs
   }
 

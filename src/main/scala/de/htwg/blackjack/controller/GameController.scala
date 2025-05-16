@@ -1,5 +1,5 @@
 package de.htwg.blackjack.controller
-import de.htwg.blackjack.command.{Command, DoubleCommand, HitCommand, SplitCommand, StandCommand}
+import de.htwg.blackjack.command.{Command, CommandInvoker, DoubleCommand, HitCommand, SplitCommand, StandCommand}
 import de.htwg.blackjack.factory.StandardDeckFactory
 import de.htwg.blackjack.model.*
 import de.htwg.blackjack.state.GamePhases
@@ -14,31 +14,12 @@ class GameController(dealerStrat: DealerStrategy = new ConservativeDealer) {
   private var currentBet: Double = 0.0
   private var state: GameState  = uninitialized
   private var history: List[(GameState, Double, Command)] = Nil
-
-
+  private var invoker = new CommandInvoker(this)
+  def setStateInternal(gs: GameState): Unit = state = gs
   def getBudget: Double = budget
   def getState: GameState = state
- def setState(s: GameState): Unit = state = s
- def setBudget(b: Double): Unit = budget = b
-  def undo(): Option[GameState] = history match {
-    case (prevState, prevBudget, _) :: rest =>
-      // History ohne das oberste Element
-      history = rest
-      // State und Budget wiederherstellen
-      state   = prevState.copy(budget = prevBudget)
-        // 2) State komplett zurücksetzen
-        state = prevState
-         // 3) Controller-Budget auf gespeicherten Wert zurücksetzen
-        budget = prevBudget
-        // 4) Wenn du willst, auch currentBet zurücksetzen:
-        currentBet = prevState.currentBet
-      Some(state)
-
-    case Nil =>
-      None
-  }
-
-
+  def setState(s: GameState): Unit = state = s
+  def setBudget(b: Double): Unit = budget = b
   def execute(cmd: Command): Try[GameState] = {
     val oldState = state
     val oldBudget = state.budget
@@ -49,9 +30,6 @@ class GameController(dealerStrat: DealerStrategy = new ConservativeDealer) {
       newState
     }
   }
-
-
-  //def rawHit(): Try[Unit] =
   def placeBet(bet: Double): Unit = {
     if (bet <= 0) throw new IllegalArgumentException("Einsatz muss > 0 sein")
     if (bet > budget * 0.9) throw new IllegalArgumentException(f"einsatz muss <= 90%% deines Budgets (max:${budget * 0.9}%.2f sein")
@@ -59,7 +37,6 @@ class GameController(dealerStrat: DealerStrategy = new ConservativeDealer) {
     budget -= bet
     state = initRound(bet)
   }
-
   private def initRound(bet: Double): GameState = {
     val deck0 = StandardDeckFactory.newDeck
     // Ziehe p1, d1, p2, d2 …
@@ -81,20 +58,16 @@ class GameController(dealerStrat: DealerStrategy = new ConservativeDealer) {
     )
 
   }
-
-  def playerHit(): Try[GameState] = execute(HitCommand)
-  def playerStand(): Try[GameState] = execute(StandCommand)
-  def playerDouble(): Try[GameState] = execute(DoubleCommand)
-  def playerSplit(): Try[GameState] = execute(SplitCommand)
-
-
+  def playerHit(): Try[GameState] = invoker.execute(HitCommand)
+  def playerStand(): Try[GameState] = invoker.execute(StandCommand)
+  def playerDouble(): Try[GameState] = invoker.execute(DoubleCommand)
+  def playerSplit(): Try[GameState] = invoker.execute(SplitCommand)
+  def undo(): Option[GameState] = invoker.undo()
+  def redo(): Option[GameState] = invoker.redo()
   private def dealerPlay(): Unit = state = state.phase.stand(state)
-
   def resolveBet(): Unit = {
     val newState = GamePhases.Payout(state).pay(state)
     state = newState
     budget = newState.budget // Controller-Budget auf den neuen Stand setzen
   }
-
-
 }
