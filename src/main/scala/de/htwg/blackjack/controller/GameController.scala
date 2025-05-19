@@ -6,7 +6,6 @@ import de.htwg.blackjack.state.GamePhases
 import de.htwg.blackjack.state.GamePhases.{DealerBustPhase, DealerTurn, PlayerTurn}
 import de.htwg.blackjack.strategy.ConservativeDealer
 import de.htwg.blackjack.strategy.interfacE.DealerStrategy
-
 import scala.compiletime.uninitialized
 import scala.util.Try
 class GameController(dealerStrat: DealerStrategy = new ConservativeDealer) {
@@ -16,19 +15,13 @@ class GameController(dealerStrat: DealerStrategy = new ConservativeDealer) {
   private var observers: List[GameObserver] = Nil
   private var history: List[(GameState, Double, Command)] = Nil
   private val invoker = new CommandInvoker(this)
-
   def setStateInternal(gs: GameState): Unit = {
     state = gs
     notifyObservers()
   }
-
   def addObserver(obs: GameObserver): Unit = observers ::= obs
-
   def removeObserver(obs: GameObserver): Unit = observers = observers.filterNot(_ == obs)
-
   private def notifyObservers(): Unit = observers.foreach(_.update(state))
-
-
   def getBudget: Double = budget
   def getState: GameState = state
   def setState(s: GameState): Unit = state = s
@@ -73,7 +66,6 @@ class GameController(dealerStrat: DealerStrategy = new ConservativeDealer) {
       budget = budget ,
       currentBet = bet
     )
-
   }
   def tryPlaceBet(bet: Double): Try[Unit] = Try(placeBet(bet))
   def playerHit(): Try[GameState] = invoker.execute(HitCommand)
