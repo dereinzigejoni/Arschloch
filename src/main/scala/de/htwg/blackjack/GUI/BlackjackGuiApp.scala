@@ -168,7 +168,7 @@ object BlackjackGuiApp extends JFXApp3 with GameObserver {
       showResultScreen(renderFullText(gs))
       return
     }
-
+    
     gs.phase match {
       case PlayerTurn =>
         showGameScreen()
@@ -244,23 +244,10 @@ object BlackjackGuiApp extends JFXApp3 with GameObserver {
     gamePane.visible    = true;  resultPane.visible = false
   }
   private def showResultScreen(text: String): Unit = {
-    welcomePane.visible = false;
-    betPane.visible = false
-    gamePane.visible = false;
-    resultPane.visible = true
-    resultText.text = text + s"\nGewinn dieser Runde: €${calculateRoundWin(gs = currentState)}"
+    welcomePane.visible = false; betPane.visible = false
+    gamePane.visible    = false; resultPane.visible = true
+    resultText.text = text
   }
-
-  private def calculateRoundWin(gs: GameState): Double = {
-    val bet = gs.currentBet
-    gs.phase match {
-      case FinishedPhase =>
-        // Gewinn = neues Budget - altes Budget (vereinfacht: Payout handled)
-        (gs.budget - (controller.getBudget - bet))
-      case _ => 0.0
-    }
-  }
-
 
   private def renderPartialInGui(gs: GameState): Unit = {
     dealerArea.children.clear()
