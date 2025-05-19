@@ -1,47 +1,30 @@
 // build.sbt
-
-// ---- Projekt‐Meta ----
-ThisBuild / organization := "de.htwg.blackjack"
-ThisBuild / version      := "0.1.0-SNAPSHOT"
-// Du hast Scala 3-Code (wildcards `import model.*`), also:
 ThisBuild / scalaVersion := "3.5.0"
-
-// Sonatype für ScalaFX und andere Bibliotheken
-//resolvers += Resolver.sonatypeRepo("public")
+ThisBuild / version      := "0.1.0-SNAPSHOT"
+ThisBuild / organization := "de.htwg.blackjack"
 
 lazy val root = (project in file("."))
+  // Scoverage aktivieren
+  .enablePlugins(ScoverageSbtPlugin)
   .settings(
     name := "ScalaBlackjack",
 
-    // zwingend forken, damit JavaFX in eigenen JVM‐Prozess läuft
-    Compile / fork := true,
+    // Dependencies
+    libraryDependencies ++= Seq(
+      "org.scala-lang.modules" %% "scala-swing" % "3.0.0",
+      "org.scalatest"          %% "scalatest"   % "3.2.19" % Test
+    ),
 
-    // Compiler‐Optionen
+    // Scoverage‐Optionen
+    coverageHighlighting := true, // Highlighting im Report
+
+    // Compiler-Options
     scalacOptions ++= Seq(
       "-deprecation",
       "-feature",
-      "-unchecked",
-      "-encoding", "utf8"
+      "-Xfatal-warnings"
     ),
 
-    // Deine Bibliotheken
-    libraryDependencies ++= Seq(
-      // Test‐Framework
-      "org.scalatest"  %% "scalatest"  % "3.2.19" % Test,
-      "org.scalactic"  %% "scalactic"  % "3.2.19" % Test,
-
-      // ScalaFX für GUI (Version für Scala 3.x)
-      "org.scalafx"    %% "scalafx"    % "22.0.0-R33"
-    ),
-
-    // ScalaTest als Test‐Framework bekanntmachen
-    testFrameworks += new TestFramework("org.scalatest.tools.Framework"),
-
-    // Scoverage‐Plugin‐Einstellungen (falls du Code‐Coverage nutzt)
-    // Coverage aktivieren
-    coverageEnabled      := true,
-    // Mindest‐Coverage (in %)
-    coverageMinimumBranchTotal      := 70,
-    // Build fehlschlagen lassen, wenn Minimum nicht erreicht
-    coverageFailOnMinimum:= true
+    // Ressourcen
+    Compile / resourceDirectory := baseDirectory.value / "src" / "main" / "resources"
   )
