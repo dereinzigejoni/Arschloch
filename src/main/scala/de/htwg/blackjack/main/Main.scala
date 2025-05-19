@@ -1,3 +1,8 @@
-package de.htwg.blackjack.main
+// src/main/scala/de/htwg/blackjack/Main.scala
+package de.htwg.blackjack
+
 import de.htwg.blackjack.view.TuiView
-@main def Main(): Unit = TuiView.run()
+
+object Main {
+  def main(args: Array[String]): Unit = TuiView.run()
+}

@@ -7,11 +7,11 @@ lazy val root = (project in file("."))
   // Scoverage aktivieren
   .enablePlugins(ScoverageSbtPlugin)
   .settings(
-    name := "ScalaBlackjack",
+    name := "Blackjack",
 
     // Dependencies
     libraryDependencies ++= Seq(
-      "org.scala-lang.modules" %% "scala-swing" % "3.0.0",
+      "org.scalafx" %% "scalafx" % "22.0.0-R33",
       "org.scalatest"          %% "scalatest"   % "3.2.19" % Test
     ),
 
