@@ -22,7 +22,14 @@ enum Suits(val symbol: String):
   case Spades extends Suits("♠")
 
 
-case class Card(rank: Rank, suit: Suits):
+case class Card(rank: Rank, suit: Suits,isFaceUp: Boolean = false){
   def value: Int = rank.value
 
-  override def toString: String = s"${suit.symbol}${rank.symbol}"
+  /** Klappt die Karte um und liefert eine neue Instanz zurück */
+  def flip: Card = copy(isFaceUp = !isFaceUp)
+
+  /** Hilfs–Getter, um die Rückseite zu prüfen */
+  def isFaceDown: Boolean = !isFaceUp
+
+
+  override def toString: String = s"${suit.symbol}${rank.symbol}"}

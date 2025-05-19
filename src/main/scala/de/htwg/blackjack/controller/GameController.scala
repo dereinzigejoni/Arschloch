@@ -43,11 +43,16 @@ class GameController(dealerStrat: DealerStrategy = new ConservativeDealer) {
   }
   def placeBet(bet: Double): Unit = {
     if (bet <= 0) throw new IllegalArgumentException("Einsatz muss > 0 sein")
-    if (bet > budget * 0.9) throw new IllegalArgumentException(f"einsatz muss <= 90%% deines Budgets (max:${budget * 0.9}%.2f sein")
+    if (bet > budget * 0.9)
+      throw new IllegalArgumentException(f"Einsatz muss ≤ 90%% Deines Budgets sein (max: ${budget * 0.9}%.2f)")
+
     currentBet = bet
-    budget -= bet
-    state = initRound(bet)
+    budget    -= bet
+
+    // State setzen _und_ Observer benachrichtigen
+    setStateInternal(initRound(bet))
   }
+
   private def initRound(bet: Double): GameState = {
     val deck0 = StandardDeckFactory.newDeck
     // Ziehe p1, d1, p2, d2 …
@@ -89,5 +94,6 @@ class GameController(dealerStrat: DealerStrategy = new ConservativeDealer) {
     val newState = GamePhases.Payout(state).pay(state)
     state = newState
     budget = newState.budget // Controller-Budget auf den neuen Stand setzen
+    notifyObservers()
   }
 }

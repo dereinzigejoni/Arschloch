@@ -2,12 +2,13 @@
 package de.htwg.blackjack.view
 
 import scala.util.{Failure, Success, Try}
-import de.htwg.blackjack.controller.{GameController, GameObserver}
+import de.htwg.blackjack.controller.{SharedGameController, GameObserver}
 import de.htwg.blackjack.model.*
 import de.htwg.blackjack.state.GamePhases.*
 
 object TuiView extends GameObserver{
-  private val controller = new GameController()
+  private val controller = SharedGameController.instance
+  controller.addObserver(this)
   private val lineWidth = 40
   private def hBorder(c: Char = '='): String = c.toString * lineWidth
   private def padCenter(text: String): String = {
@@ -51,38 +52,53 @@ object TuiView extends GameObserver{
     case Failure(ex) => println(s"Fehler bei $action: ${ex.getMessage}")
   }
   def run(): Unit = {
-    printWelcome()
+    //printWelcome()
+    
     var playing = true
+    askBet() // löst über Observer initiales renderPartial() aus
+    
     while (playing) {
-      askBet()
-      while (controller.getState.phase == PlayerTurn) {
-        renderPartial()
-        printMenu()
-        val inputTry = Try(scala.io.StdIn.readLine().trim.toUpperCase)
-        inputTry match {
-          case Failure(ex) =>
-            println(s"Eingabefehler: ${ex.getMessage}")
-          case Success(choice) =>
-            processChoice(choice)
+      printMenu()
+      scala.util.Try(scala.io.StdIn.readLine().trim.toUpperCase) match {
+        case scala.util.Failure(ex) => println(s"Eingabefehler: ${ex.getMessage}")
+        
+      case scala.util.Success(cmd) =>
+        cmd match {
+        case "H" => controller.playerHit()
+          
+        case "S" => controller.playerStand()
+          
+        case "D" => controller.playerDouble()
+          
+        case "P" => controller.playerSplit()
+          
+        case "U" => controller.undo()
+          
+        case "R" => controller.redo()
+          
+        case "Q" => playing = false
+          
+        case _ => println(s"Unbekannter Befehl: $cmd")
+          
         }
+        
+        if (controller.getState.phase != PlayerTurn) {
+          controller.resolveBet() // löst finales renderFull() via Observer aus
+            println(f"\nDein aktuelles Budget: €${controller.getBudget}%.2f\n")
+            println(hBorder('-'))
+             println(padCenter("[N] Neues Spiel    [Q] Quit"))
+            println(hBorder('-'))
+            scala.io.StdIn.readLine().trim.toUpperCase match {
+           case "N" => askBet()
+            
+          case _ => playing = false
+            
+          }
+          
+        }
+        
       }
-
-      controller.playerStand()
-      controller.resolveBet()
-      renderFull()
-      println(f"\nDein aktuelles Budget: €${controller.getBudget}%.2f\n")
-      println(hBorder('-'))
-      println(padCenter("[N] Neues Spiel    [Q] Quit"))
-      println(hBorder('-'))
-      scala.io.StdIn.readLine().trim.toUpperCase match {
-        case "N" => // nächste Runde
-        case "Q" =>
-          println("\nGame over. Danke fürs Spielen!")
-          playing = false
-        case _ =>
-          println("Ungültige Eingabe, beende das Spiel.")
-          playing = false
-      }
+      
     }
   }
   def askBet(): Unit = {
