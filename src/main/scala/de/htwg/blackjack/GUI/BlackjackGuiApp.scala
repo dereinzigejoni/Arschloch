@@ -183,26 +183,19 @@ object BlackjackGuiApp extends JFXApp3 with GameObserver {
   }
 
   private def renderPartialInGui(gs: de.htwg.blackjack.model.GameState): Unit = {
-    dealerArea.children.clear(); playerArea.children.clear()
-    // Dealer first card face
-    gs.dealer.cards.headOption.foreach(c => dealerArea.children.add(loadCardImage(c)))
-    // Dealer hidden card
-    val backView = loadBackImage()
-    dealerArea.children.add(backView)
-
-    // Player cards with deal animation
+    dealerArea.children.clear()
+    playerArea.children.clear()
+    // Dealer: alle Karten offen
+    gs.dealer.cards.foreach(c => dealerArea.children.add(loadCardImage(c)))
+    // Player: alle Karten offen
     gs.playerHands(gs.activeHand).cards.foreach(c => animateDeal(playerArea, c))
   }
 
   private def animateDealerReveal(card: Card): Unit = {
-    // Versuche, das zweite Kind (Index 1) zu holen
     dealerArea.children.lift(1) match {
-      // Wenn's ein Some(ImageView) ist, flippe es um
       case Some(backView: javafx.scene.image.ImageView) =>
         val flip1 = new RotateTransition(Duration(300), backView) {
-          fromAngle = 0;
-          toAngle = 90;
-          axis = new Point3D(0, 1, 0)
+          fromAngle = 0; toAngle = 90; axis = new Point3D(0, 1, 0)
         }
         flip1.onFinished = _ => {
           dealerArea.children.remove(backView)
@@ -210,30 +203,23 @@ object BlackjackGuiApp extends JFXApp3 with GameObserver {
           frontView.rotate = -90
           dealerArea.children.add(frontView)
           val flip2 = new RotateTransition(Duration(300), frontView) {
-            fromAngle = -90;
-            toAngle = 0;
-            axis = new Point3D(0, 1, 0)
+            fromAngle = -90; toAngle = 0; axis = new Point3D(0, 1, 0)
           }
           flip2.play()
         }
         flip1.play()
-
-      // Alles andere (None oder kein ImageView)
       case _ =>
     }
   }
-
 
   private def animateDeal(target: Pane, card: Card): Unit = {
     val cardView = loadCardImage(card)
     cardView.opacity = 0
     target.children.add(cardView)
     val translate = new TranslateTransition(Duration(400), cardView) {
-      // Hier .value auf den Properties aufrufen, damit echte Doubles herauskommen:
       fromX = deckStack.layoutX.value - cardView.layoutX.value
       fromY = deckStack.layoutY.value - cardView.layoutY.value
-      toX   = 0
-      toY   = 0
+      toX   = 0; toY = 0
     }
     translate.onFinished = _ => {
       cardView.opacity = 1
@@ -244,7 +230,6 @@ object BlackjackGuiApp extends JFXApp3 with GameObserver {
     }
     translate.play()
   }
-
 
   private def renderFullText(gs: de.htwg.blackjack.model.GameState): String = {
     def hBorder(c: Char = '='): String = c.toString * 40
