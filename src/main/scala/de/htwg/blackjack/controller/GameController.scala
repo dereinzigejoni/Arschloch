@@ -3,9 +3,10 @@ import de.htwg.blackjack.command.*
 import de.htwg.blackjack.factory.StandardDeckFactory
 import de.htwg.blackjack.model.*
 import de.htwg.blackjack.state.GamePhases
-import de.htwg.blackjack.state.GamePhases.PlayerTurn
+import de.htwg.blackjack.state.GamePhases.{DealerBustPhase, DealerTurn, PlayerTurn}
 import de.htwg.blackjack.strategy.ConservativeDealer
 import de.htwg.blackjack.strategy.interfacE.DealerStrategy
+
 import scala.compiletime.uninitialized
 import scala.util.Try
 class GameController(dealerStrat: DealerStrategy = new ConservativeDealer) {
@@ -95,5 +96,19 @@ class GameController(dealerStrat: DealerStrategy = new ConservativeDealer) {
     state = newState
     budget = newState.budget // Controller-Budget auf den neuen Stand setzen
     notifyObservers()
+  }
+
+  def dealerHit(): Try[GameState] = Try {
+    val (card, newDeck) = state.deck.draw()
+    val newDealerHand = state.dealer.add(card)
+    val newPhase = if (newDealerHand.value > 21) DealerBustPhase else DealerTurn
+    val newState = state.copy(
+      deck = newDeck,
+      dealer = newDealerHand,
+      phase = newPhase
+    )
+    state = newState
+    notifyObservers()
+    newState
   }
 }

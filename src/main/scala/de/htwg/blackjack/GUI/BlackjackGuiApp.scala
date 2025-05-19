@@ -7,11 +7,11 @@ import scalafx.scene.control._
 import scalafx.scene.image._
 import scalafx.geometry._
 import scalafx.Includes._
-import de.htwg.blackjack.controller.{SharedGameController, GameObserver}
-import de.htwg.blackjack.model.Card
+import de.htwg.blackjack.controller.{GameObserver, SharedGameController}
+import de.htwg.blackjack.model.{Card, GameState}
 import de.htwg.blackjack.state.GamePhases.*
 import scalafx.application.JFXApp3.PrimaryStage
-import scalafx.animation.{RotateTransition, TranslateTransition}
+import scalafx.animation.{PauseTransition, RotateTransition, TranslateTransition}
 import scalafx.scene.media.{Media, MediaPlayer}
 import scalafx.util.Duration
 import javafx.geometry.Point3D
@@ -26,6 +26,7 @@ object BlackjackGuiApp extends JFXApp3 with GameObserver {
   // State für Einsatz
   private var currentBet = 0.0
   private val chipValues = Seq(1, 10, 25, 50, 100, 500, 1000)
+  private var animateDealerOnDealerTurn = false
 
   // UI-Panes
   private var welcomePane: VBox    = _
@@ -67,20 +68,19 @@ object BlackjackGuiApp extends JFXApp3 with GameObserver {
     betLabel    = new Label("Einsatz: €0.00")
     placeBetBtn = new Button("Einsatz platzieren") {
       disable = true
-      onAction = _ =>
-        controller.tryPlaceBet(currentBet) match {
-          case Success(_) =>
-            disable         = true
-            chipBox.disable = true
-            controller.setStateInternal(controller.getState)
-          case Failure(ex) =>
-            new Alert(Alert.AlertType.Error) {
-              initOwner(stage)
-              title       = "Einsatzfehler"
-              headerText  = "Ungültiger Einsatz"
-              contentText = ex.getMessage
-            }.showAndWait()
-        }
+      onAction = _ => controller.tryPlaceBet(currentBet) match {
+        case Success(_) =>
+          disable         = true
+          chipBox.disable = true
+          controller.setStateInternal(controller.getState)
+        case Failure(ex) =>
+          new Alert(Alert.AlertType.Error) {
+            initOwner(stage)
+            title       = "Einsatzfehler"
+            headerText  = "Ungültiger Einsatz"
+            contentText = ex.getMessage
+          }.showAndWait()
+      }
     }
     clearBetBtn = new Button("Löschen") {
       onAction = _ =>
@@ -113,7 +113,10 @@ object BlackjackGuiApp extends JFXApp3 with GameObserver {
     deckBox.alignment = Pos.TopCenter
 
     val hitBtn   = createActionButton("Hit",    () => controller.playerHit(),   "Hit")
-    val standBtn = createActionButton("Stand",  () => controller.playerStand(),"Stand")
+    val standBtn = createActionButton("Stand",  () => {
+      animateDealerOnDealerTurn = true
+      controller.playerStand()
+    }, "Stand")
     val dblBtn   = createActionButton("Double", () => controller.playerDouble(),"Double")
     val splBtn   = createActionButton("Split",  () => controller.playerSplit(),"Split")
     val undoBtn  = new Button("Undo") { onAction = _ => controller.undo().foreach(_ => ()) }
@@ -134,7 +137,7 @@ object BlackjackGuiApp extends JFXApp3 with GameObserver {
     // --- Result Pane ---
     resultText = new TextArea { editable = false; wrapText = true }
     val newGameBtn = new Button("Neues Spiel") { onAction = _ => showBetScreen() }
-    val exitBtn    = new Button("Beenden") { onAction = _ => sys.exit(0) }
+    val exitBtn    = new Button("Beenden")    { onAction = _ => sys.exit(0) }
     resultPane = new VBox(15, resultText, new HBox(10, newGameBtn, exitBtn))
     resultPane.padding   = Insets(20)
     resultPane.alignment = Pos.Center
@@ -149,18 +152,80 @@ object BlackjackGuiApp extends JFXApp3 with GameObserver {
     }
   }
 
-  override def update(gs: de.htwg.blackjack.model.GameState): Unit = {
+  override def update(gs: GameState): Unit = {
     budgetLabel.text = f"€${controller.getBudget}%.2f"
+
+    if (gs.phase == PlayerTurn && gs.playerHands.head.cards.size == 2 && gs.playerHands.head.value == 21) {
+      showGameScreen()
+      new Alert(Alert.AlertType.Information) {
+        initOwner(stage)
+        title = "Blackjack!"
+        headerText = "Glückwunsch!"
+        contentText = "Du hast einen Blackjack erzielt!"
+      }.showAndWait()
+      // Payout für Blackjack (3:2)
+      controller.resolveBet()
+      showResultScreen(renderFullText(gs))
+      return
+    }
+
     gs.phase match {
-      case PlayerTurn => showGameScreen(); renderPartialInGui(gs)
-      case DealerTurn =>
+      case PlayerTurn =>
         showGameScreen()
-        animateDealerReveal(gs.dealer.cards.tail.head)
         renderPartialInGui(gs)
-      case FinishedPhase | DealerBustPhase | PlayerBustPhase =>
+
+      case PlayerBustPhase =>
+        animateDealerOnDealerTurn = true
+        controller.playerStand().failed.foreach { ex =>
+          new Alert(Alert.AlertType.Error) {
+            initOwner(stage)
+            title      = "Auto-Stand fehlgeschlagen"
+            contentText = ex.getMessage
+          }.showAndWait()
+        }
+
+      case DealerTurn if animateDealerOnDealerTurn =>
+        animateDealerOnDealerTurn = false
+        showGameScreen()
+        dealerDrawLoop()
+
+      case DealerBustPhase | FinishedPhase =>
         controller.resolveBet()
         showResultScreen(renderFullText(gs))
-      case _ =>
+
+      case _ => // sonst nichts
+    }
+  }
+
+  /** Startet die Reveal-Animation und dann den Draw-Loop */
+  private def dealerDrawLoop(): Unit = {
+    val gs0 = controller.getState
+    if (gs0.dealer.cards.size >= 2) animateDealerReveal(gs0.dealer.cards(1))
+    new PauseTransition(Duration(800)) { onFinished = _ => drawNext() }.play()
+  }
+
+  /** Hittet solange, bis Dealer ≥17 erreicht */
+  private def drawNext(): Unit = {
+    val gs = controller.getState
+    if (gs.dealer.value < 17) {
+      controller.dealerHit() match {
+        case Success(_) =>
+          val newCard = controller.getState.dealer.cards.last
+          animateDeal(dealerArea, newCard)
+          new PauseTransition(Duration(600)) { onFinished = _ => drawNext() }.play()
+        case Failure(ex) =>
+          new Alert(Alert.AlertType.Error) {
+            initOwner(stage)
+            title      = "Dealer-Zieh-Fehler"
+            contentText = ex.getMessage
+          }.showAndWait()
+      }
+    } else {
+      new PauseTransition(Duration(3000)) {
+        onFinished = _ =>
+          controller.resolveBet()
+          showResultScreen(renderFullText(controller.getState))
+      }.play()
     }
   }
 
@@ -171,24 +236,61 @@ object BlackjackGuiApp extends JFXApp3 with GameObserver {
   private def showBetScreen(): Unit = {
     welcomePane.visible = false; betPane.visible = true
     gamePane.visible    = false; resultPane.visible = false
-    currentBet = 0.0; betLabel.text = "Einsatz: €0.00"; chipBox.disable = false; placeBetBtn.disable = true
+    currentBet = 0.0; betLabel.text = "Einsatz: €0.00"
+    chipBox.disable = false; placeBetBtn.disable = true
   }
   private def showGameScreen(): Unit = {
     welcomePane.visible = false; betPane.visible = false
     gamePane.visible    = true;  resultPane.visible = false
   }
   private def showResultScreen(text: String): Unit = {
-    welcomePane.visible = false; betPane.visible = false
-    gamePane.visible    = false; resultPane.visible = true; resultText.text = text
+    welcomePane.visible = false;
+    betPane.visible = false
+    gamePane.visible = false;
+    resultPane.visible = true
+    resultText.text = text + s"\nGewinn dieser Runde: €${calculateRoundWin(gs = currentState)}"
   }
 
-  private def renderPartialInGui(gs: de.htwg.blackjack.model.GameState): Unit = {
+  private def calculateRoundWin(gs: GameState): Double = {
+    val bet = gs.currentBet
+    gs.phase match {
+      case FinishedPhase =>
+        // Gewinn = neues Budget - altes Budget (vereinfacht: Payout handled)
+        (gs.budget - (controller.getBudget - bet))
+      case _ => 0.0
+    }
+  }
+
+
+  private def renderPartialInGui(gs: GameState): Unit = {
     dealerArea.children.clear()
     playerArea.children.clear()
-    // Dealer: alle Karten offen
-    gs.dealer.cards.foreach(c => dealerArea.children.add(loadCardImage(c)))
-    // Player: alle Karten offen
-    gs.playerHands(gs.activeHand).cards.foreach(c => animateDeal(playerArea, c))
+
+    // Dealer: erste Karte + verdeckt
+    gs.dealer.cards.headOption.foreach(c => dealerArea.children.add(loadCardImage(c)))
+    dealerArea.children.add(loadBackImage())
+
+    // Spieler-Hände
+    gs.playerHands.zipWithIndex.foreach { case (hand, idx) =>
+      val handBox = new VBox(5)
+      val lbl = new Label(s"Hand ${idx + 1}") {
+        if (idx == gs.activeHand) style = "-fx-font-weight: bold; -fx-underline: true"
+      }
+      handBox.children.add(lbl)
+
+      // Horizontal oder vertical, je nach Split
+      val container: Pane =
+        if (gs.playerHands.size > 1) new VBox(10)
+        else new HBox(10)
+
+      hand.cards.foreach { card =>
+        animateDeal(container, card)
+      }
+
+      handBox.children.add(container)
+      handBox.padding = Insets(10)
+      playerArea.children.add(handBox)
+    }
   }
 
   private def animateDealerReveal(card: Card): Unit = {
@@ -199,8 +301,7 @@ object BlackjackGuiApp extends JFXApp3 with GameObserver {
         }
         flip1.onFinished = _ => {
           dealerArea.children.remove(backView)
-          val frontView = loadCardImage(card)
-          frontView.rotate = -90
+          val frontView = loadCardImage(card); frontView.rotate = -90
           dealerArea.children.add(frontView)
           val flip2 = new RotateTransition(Duration(300), frontView) {
             fromAngle = -90; toAngle = 0; axis = new Point3D(0, 1, 0)
@@ -231,7 +332,7 @@ object BlackjackGuiApp extends JFXApp3 with GameObserver {
     translate.play()
   }
 
-  private def renderFullText(gs: de.htwg.blackjack.model.GameState): String = {
+  private def renderFullText(gs: GameState): String = {
     def hBorder(c: Char = '='): String = c.toString * 40
     def padCenter(s: String): String = {
       val width = 40; val pad = (width - s.length) / 2
@@ -261,7 +362,8 @@ object BlackjackGuiApp extends JFXApp3 with GameObserver {
         onMouseClicked = _ => {
           currentBet += v; betLabel.text = f"Einsatz: €$currentBet%.2f"; placeBetBtn.disable = false
         }
-      }; iv
+      }
+      iv
     }
   }
 
@@ -278,9 +380,21 @@ object BlackjackGuiApp extends JFXApp3 with GameObserver {
   preloadCards()
   private def preloadCards(): Unit = {
     Option(getClass.getResourceAsStream("/img/cards/back.png")).foreach(is => cardCache("back") = new Image(is))
-    val suits = Seq("Clubs","Diamonds","Hearts","Spades"); val ranks = Seq("A","2","3","4","5","6","7","8","9","10","J","Q","K")
-    for { s<-suits; r<-ranks } { val key=s+r; val path=s"/img/cards/$key.png"; Option(getClass.getResourceAsStream(path)).foreach(is=>cardCache(key)=new Image(is)) }
+    val suits = Seq("Clubs","Diamonds","Heart","Spades")
+    val ranks = Seq("A","2","3","4","5","6","7","8","9","10","J","Q","K")
+    for { s <- suits; r <- ranks } {
+      val key = s + r
+      val path = s"/img/cards/$key.png"
+      Option(getClass.getResourceAsStream(path)).foreach(is => cardCache(key) = new Image(is))
+    }
   }
-  private def loadCardImage(c: Card): ImageView = { val key=c.suit.toString+c.rank.symbol; val img=cardCache.getOrElse(key,cardCache("back")); new ImageView(img){fitWidth=80;fitHeight=120} }
-  private def loadBackImage(): ImageView = { val img=cardCache("back"); new ImageView(img){fitWidth=80;fitHeight=120} }
+
+  private def loadCardImage(c: Card): ImageView = {
+    val key = c.suit.toString + c.rank.symbol
+    new ImageView(cardCache(key)) { fitWidth = 80; fitHeight = 120 }
+  }
+
+  private def loadBackImage(): ImageView = {
+    new ImageView(cardCache("back")) { fitWidth = 80; fitHeight = 120 }
+  }
 }
