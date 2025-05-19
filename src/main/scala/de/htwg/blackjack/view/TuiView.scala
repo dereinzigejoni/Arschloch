@@ -2,17 +2,26 @@
 package de.htwg.blackjack.view
 
 import scala.util.{Failure, Success, Try}
-import de.htwg.blackjack.controller.GameController
+import de.htwg.blackjack.controller.{GameController, GameObserver}
 import de.htwg.blackjack.model.*
 import de.htwg.blackjack.state.GamePhases.*
 
-object TuiView {
+object TuiView extends GameObserver{
   private val controller = new GameController()
   private val lineWidth = 40
   private def hBorder(c: Char = '='): String = c.toString * lineWidth
   private def padCenter(text: String): String = {
     val padding = (lineWidth - text.length) / 2
     " " * padding + text + " " * (lineWidth - text.length - padding)
+  }
+
+  override def update(gs: GameState): Unit = {
+    gs.phase match {
+      case PlayerTurn => renderPartial().foreach(println)
+      case FinishedPhase | DealerBustPhase | PlayerBustPhase =>
+        renderFull().foreach(println)
+      case _ => // keine Ausgabe
+    }
   }
   def printWelcome(): Unit = {
     println(hBorder())
@@ -108,14 +117,15 @@ object TuiView {
     val opts = formatMenuOptions(controller.getState, controller.getBudget)
     println("\n" + opts.mkString(" | "))
   }
+
   def renderPartial(): Seq[String] = {
     val state = controller.getState
-    val border     = hBorder()
-    val header     = padCenter("DEINE HAND")
-    val dFirst     = state.dealer.cards.head
+    val border = hBorder()
+    val header = padCenter("DEINE HAND")
+    val dFirst = state.dealer.cards.head
     val dealerLine = s"Dealer: $dFirst [???]"
-    val hand       = state.playerHands(state.activeHand)
-    val cardsStr   = hand.cards.mkString(" ")
+    val hand = state.playerHands(state.activeHand)
+    val cardsStr = hand.cards.mkString(" ")
     val playerLine = s"Spieler (${state.activeHand + 1}/${state.playerHands.size}): $cardsStr (Wert: ${hand.value})"
 
     val lines = Seq(
@@ -130,37 +140,50 @@ object TuiView {
     lines.foreach(println)
     lines
   }
-  def renderFull(): Unit = {
-    val state = controller.getState
-    println("\n" + hBorder())
-    println(padCenter("ERGEBNISSE DER RUNDE"))
-    println(hBorder())
-    // Dealer: alle Karten
-    val dealerCards = state.dealer.cards.mkString(" ")
-    println(s"Dealer: $dealerCards (Wert: ${state.dealer.value})\n")
 
-    // Spielerhände + Einsatz
-    state.playerHands.zip(state.bets).zipWithIndex.foreach {
+  /** Zeigt alle Dealer-Karten, alle Spielerhände + Ergebnisse */
+  def renderFull(): Seq[String] = {
+    val state = controller.getState
+    val topBorder = "\n" + hBorder()
+    val header = padCenter("ERGEBNISSE DER RUNDE")
+    val midBorder = hBorder()
+    val dealerCards = state.dealer.cards.mkString(" ")
+    val dealerLine = s"Dealer: $dealerCards (Wert: ${state.dealer.value})\n"
+
+    // jede Hand mit Einsatz
+    val playerLines = state.playerHands.zip(state.bets).zipWithIndex.map {
       case ((hand, bet), idx) =>
-        val cards = hand.cards.mkString(" ")
-        println(f"Hand ${idx + 1}: $cards (Wert: ${hand.value}) Einsatz: €$bet%.2f")
+        val cs = hand.cards.mkString(" ")
+        f"Hand ${idx + 1}: $cs (Wert: ${hand.value}) Einsatz: €$bet%.2f"
     }
 
-    // Wer gewinnt?
-    state.playerHands.foreach { hand =>
+    // Ergebniszeilen
+    val resultLines = state.playerHands.map { hand =>
       val p = hand.value
       val d = state.dealer.value
-      val result =
-        if (p > 21) "Du bist Bust – Dealer gewinnt."
-        else if (d > 21) "Dealer ist Bust – Du gewinnst!"
-        else if (p > d) "Du gewinnst!"
-        else if (p < d) "Dealer gewinnt!"
-        else "Push – unentschieden"
-      println(result)
+      if (p > 21) "Du bist Bust – Dealer gewinnt."
+      else if (d > 21) "Dealer ist Bust – Du gewinnst!"
+      else if (p > d) "Du gewinnst!"
+      else if (p < d) "Dealer gewinnt!"
+      else "Push – unentschieden"
     }
 
-    println("\n" + hBorder('-'))
+    val bottomBorder = "\n" + hBorder('-')
+
+    val lines = Seq(
+      topBorder,
+      header,
+      midBorder,
+      dealerLine
+    ) ++
+      playerLines ++
+      resultLines ++
+      Seq(bottomBorder)
+
+    lines.foreach(println)
+    lines
   }
+
   def parseBetInput(input: String, budget: Double): Either[String, Double] = {
     if (input.equalsIgnoreCase("H")) Left("QUIT")
     else Try(input.toDouble).toOption match {

@@ -12,9 +12,22 @@ class GameController(dealerStrat: DealerStrategy = new ConservativeDealer) {
   private var budget: Double     = 4000.0
   private var currentBet: Double = 0.0
   private var state: GameState  = uninitialized
+  private var observers: List[GameObserver] = Nil
   private var history: List[(GameState, Double, Command)] = Nil
   private val invoker = new CommandInvoker(this)
-  def setStateInternal(gs: GameState): Unit = state = gs
+
+  def setStateInternal(gs: GameState): Unit = {
+    state = gs
+    notifyObservers()
+  }
+
+  def addObserver(obs: GameObserver): Unit = observers ::= obs
+
+  def removeObserver(obs: GameObserver): Unit = observers = observers.filterNot(_ == obs)
+
+  private def notifyObservers(): Unit = observers.foreach(_.update(state))
+
+
   def getBudget: Double = budget
   def getState: GameState = state
   def setState(s: GameState): Unit = state = s
@@ -61,8 +74,16 @@ class GameController(dealerStrat: DealerStrategy = new ConservativeDealer) {
   def playerStand(): Try[GameState] = invoker.execute(StandCommand)
   def playerDouble(): Try[GameState] = invoker.execute(DoubleCommand)
   def playerSplit(): Try[GameState] = invoker.execute(SplitCommand)
-  def undo(): Option[GameState] = invoker.undo()
-  def redo(): Option[GameState] = invoker.redo()
+  def undo(): Option[GameState] = {
+    val res = invoker.undo()
+    res.foreach(_ => notifyObservers())
+    res
+  }
+  def redo(): Option[GameState] = {
+    val res = invoker.redo()
+    res.foreach(_ => notifyObservers())
+    res
+  }
   private def dealerPlay(): Unit = state = state.phase.stand(state)
   def resolveBet(): Unit = {
     val newState = GamePhases.Payout(state).pay(state)
