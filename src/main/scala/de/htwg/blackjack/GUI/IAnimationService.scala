@@ -1,4 +1,4 @@
-package de.htwg.blackjack.GUI.animation
+package de.htwg.blackjack.GUI
 
 import de.htwg.blackjack.model.Card
 import scalafx.scene.layout.Pane

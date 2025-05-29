@@ -1,13 +1,13 @@
 // src/main/scala/de/htwg/blackjack/gui/animation/AnimationService.scala
-package de.htwg.blackjack.GUI.animation
+package de.htwg.blackjack.GUI
 import de.htwg.blackjack.model.Card
 import scalafx.scene.layout.Pane
 import scalafx.animation.{PauseTransition, RotateTransition, TranslateTransition}
 import scalafx.util.Duration
 import scalafx.geometry.Point3D
-import de.htwg.blackjack.GUI.animation.IAnimationService
-import scalafx.scene.image.ImageView
-import de.htwg.blackjack.GUI.card.ICardImageProvider
+import scalafx.scene.image.ImageView    // ScalaFX-Wrapper
+import scalafx.Includes._
+import javafx.scene.image.{ImageView => JfxImageView}
 
 
 class AnimationService(deckPane: Pane, cardImgs: ICardImageProvider) extends IAnimationService{
@@ -35,25 +35,34 @@ class AnimationService(deckPane: Pane, cardImgs: ICardImageProvider) extends IAn
   }
 
   override def revealCard(target: Pane, card: Card, backIdx: Int): Unit = {
-    target.children.lift(backIdx) match{
-      case Some(back:ImageView) =>
-        val flip1 = new RotateTransition(Duration(300),back){
-          fromAngle = 0; toAngle = 90; axis = new Point3D(0,1,0)
+    target.children.lift(backIdx) match {
+      case Some(backNode: JfxImageView) =>
+        // wrap the JavaFX node in a ScalaFX ImageView
+        val back = new ImageView(backNode)
+        val flip1 = new RotateTransition(Duration(300), back) {
+          fromAngle = 0;
+          toAngle = 90;
+          axis = new Point3D(0, 1, 0)
         }
         flip1.onFinished = _ => {
-          target.children.remove(back)
-          val front: ImageView = cardImgs.loadCardImage(card)
-          front.rotate = -90; target.children.add(front)
-          new RotateTransition(Duration(300), front){
-            fromAngle = -90; toAngle = 0; axis = new Point3D(0,1,0)
+          target.children.remove(backNode)
+          val front = cardImgs.loadCardImage(card)
+          front.rotate = -90
+          target.children.add(front)
+          new RotateTransition(Duration(300), front) {
+            fromAngle = -90;
+            toAngle = 0;
+            axis = new Point3D(0, 1, 0)
           }.play()
         }
         flip1.play()
+
       case _ =>
+      // either out of bounds or not an ImageView, do nothing
     }
   }
 
-  override def doublePLacement(target: Pane, card: Card): Unit = {
+  override def doublePlacement(target: Pane, card: Card): Unit = {
     val cardView: ImageView = cardImgs.loadCardImage(card)
     cardView.rotate = 90
     cardView.opacity = 0

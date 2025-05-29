@@ -1,10 +1,10 @@
 // src/main/scala/de/htwg/blackjack/di/ApplicationContext.scala
 package de.htwg.blackjack.di
 
+import de.htwg.blackjack.GUI.{CardImageProvider, IAnimationService, ICardImageProvider}
 import de.htwg.blackjack.controller.{GameController, IGameController}
 import de.htwg.blackjack.bet.{BetService, IBetService}
-import de.htwg.blackjack.GUI.animation.{AnimationService, IAnimationService}
-import de.htwg.blackjack.GUI.card.{CardImageProvider, ICardImageProvider}
+import de.htwg.blackjack.GUI.AnimationService
 // **Richtiges** Interface importieren:
 import de.htwg.blackjack.model.deck.IDeckFactory
 // und Deine Factory

@@ -1,8 +1,9 @@
 // src/main/scala/de/htwg/blackjack/gui/card/CardImageProvider.scala
-package de.htwg.blackjack.GUI.card
+package de.htwg.blackjack.GUI
 
 import de.htwg.blackjack.model.Card
 import scalafx.scene.image.{Image, ImageView}
+
 import scala.collection.mutable
 
 class CardImageProvider extends ICardImageProvider {

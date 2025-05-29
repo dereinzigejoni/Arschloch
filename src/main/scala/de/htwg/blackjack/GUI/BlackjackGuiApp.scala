@@ -1,6 +1,6 @@
 package de.htwg.blackjack.gui
-import de.htwg.blackjack.GUI.animation.IAnimationService
-import de.htwg.blackjack.GUI.gui.IGameView
+
+import de.htwg.blackjack.GUI.{IAnimationService, IGameView}
 import de.htwg.blackjack.bet.IBetService
 import scalafx.application.JFXApp3
 import scalafx.scene.Scene

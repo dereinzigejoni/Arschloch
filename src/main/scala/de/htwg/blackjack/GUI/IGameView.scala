@@ -1,4 +1,4 @@
-package de.htwg.blackjack.GUI.gui
+package de.htwg.blackjack.GUI
 
 trait IGameView {
   def startApp(): Unit

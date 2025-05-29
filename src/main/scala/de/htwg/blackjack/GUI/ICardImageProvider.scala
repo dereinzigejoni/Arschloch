@@ -1,4 +1,5 @@
-package de.htwg.blackjack.GUI.card
+package de.htwg.blackjack.GUI
+
 import de.htwg.blackjack.model.Card
 import scalafx.scene.image.ImageView
 /** Liefert ImageViews für Karten und Rückseite */

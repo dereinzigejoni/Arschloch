@@ -1,6 +1,5 @@
-package de.htwg.blackjack
-
-import de.htwg.blackjack.gui.BlackjackGuiApp
+package de.htwg.blackjack.main
+import de.htwg.blackjack.GUI.BlackjackGuiApp
 import de.htwg.blackjack.view.TuiView
 
 object Main {
