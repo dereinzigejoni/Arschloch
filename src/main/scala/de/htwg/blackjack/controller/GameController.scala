@@ -79,12 +79,12 @@ class GameController(dealerStrat: DealerStrategy = new ConservativeDealer) exten
     )
   }
 
-  def undo(): Option[GameState] = {
+  override def undo(): Option[GameState] = {
     val res = invoker.undo()
     res.foreach(_ => notifyObservers())
     res
   }
-  def redo(): Option[GameState] = {
+  override def redo(): Option[GameState] = {
     val res = invoker.redo()
     res.foreach(_ => notifyObservers())
     res

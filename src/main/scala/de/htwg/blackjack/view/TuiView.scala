@@ -121,7 +121,7 @@ object TuiView extends GameObserver{
               println(err)
             case Right(bet) =>
               // wir nutzen jetzt die Try-Variante
-              controller.tryPlaceBet(bet) match {
+              controller.tryplaceBet(bet) match {
                 case Success(_) => valid = true
                 case Failure(ex) => println(s"Einsatz-Fehler: ${ex.getMessage}")
               }

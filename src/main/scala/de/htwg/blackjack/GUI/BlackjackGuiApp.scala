@@ -1,12 +1,17 @@
 package de.htwg.blackjack.gui
+import de.htwg.blackjack.GUI.animation.IAnimationService
+import de.htwg.blackjack.GUI.gui.IGameView
+import de.htwg.blackjack.bet.IBetService
 import scalafx.application.JFXApp3
 import scalafx.scene.Scene
-import scalafx.scene.layout._
-import scalafx.scene.control._
-import scalafx.scene.image._
-import scalafx.geometry._
-import scalafx.Includes._
-import de.htwg.blackjack.controller.{GameObserver, SharedGameController}
+import scalafx.scene.layout.*
+import scalafx.scene.control.*
+import scalafx.scene.image.*
+import scalafx.geometry.*
+import scalafx.Includes.*
+import de.htwg.blackjack.controller.{GameObserver, IGameController, SharedGameController}
+import de.htwg.blackjack.di.ApplicationContext
+import de.htwg.blackjack.model.deck.IDeckFactory
 import de.htwg.blackjack.model.{Card, GameState}
 import de.htwg.blackjack.state.GamePhases.*
 import scalafx.application.JFXApp3.PrimaryStage
@@ -14,17 +19,24 @@ import scalafx.animation.{PauseTransition, RotateTransition, TranslateTransition
 import scalafx.scene.media.{Media, MediaPlayer}
 import scalafx.util.Duration
 import javafx.geometry.Point3D
+
 import scala.compiletime.uninitialized
 import scala.util.{Failure, Success, Try}
-object BlackjackGuiApp extends JFXApp3 with GameObserver {
-
-  private val controller = SharedGameController.instance
+object BlackjackGuiApp extends JFXApp3 with GameObserver with IGameView {
+  // --- Interfaces aus dem ApplicationContext ---
+  private val controller: IGameController = ApplicationContext.gameController
+  private val betSvc: IBetService = ApplicationContext.betService
+  private val anim: IAnimationService = ApplicationContext.animationService
+  private val deckFac: IDeckFactory = ApplicationContext.deckFactory
+  //private val controller = SharedGameController.instance
   controller.addObserver(this)
   // State für Einsatz
   private var currentBet = 0.0
   private val chipValues = Seq(1, 10, 25, 50, 100, 500, 1000)
   private var animateDealerOnDealerTurn = false
   private var animateDoublePlacement       = false
+  
+  
 
   // UI-Panes
   private var welcomePane: VBox    = uninitialized
@@ -43,11 +55,10 @@ object BlackjackGuiApp extends JFXApp3 with GameObserver {
   private var playerArea: HBox        = uninitialized
   private var deckStack: StackPane    = uninitialized
   private var resultText: TextArea    = uninitialized
-
-  // Background music player
   private var bgPlayer: MediaPlayer   = uninitialized
+  override def start(): Unit = startApp()
 
-  override def start(): Unit = {
+  override def startApp(): Unit = {
     // --- Background Music ---
     val media = new Media(getClass.getResource("/audio/background.mp3").toExternalForm)
     bgPlayer = new MediaPlayer(media) {
@@ -63,14 +74,15 @@ object BlackjackGuiApp extends JFXApp3 with GameObserver {
 
     // --- Bet Pane ---
     budgetLabel = new Label()
-    betLabel    = new Label("Einsatz: €0.00")
+    betLabel    = new Label(f"Einsatz: €${betSvc.currentBet}%.2f")
     placeBetBtn = new Button("Einsatz platzieren") {
       disable = true
-      onAction = _ => controller.tryPlaceBet(currentBet) match {
+      onAction = _ => betSvc.placeBet(currentBet) match {
         case Success(_) =>
           disable         = true
           chipBox.disable = true
-          controller.setStateInternal(controller.getState)
+          //controller.setStateInternal(controller.getState)
+          controller.getState
         case Failure(ex) =>
           new Alert(Alert.AlertType.Error) {
             initOwner(stage)
@@ -83,7 +95,7 @@ object BlackjackGuiApp extends JFXApp3 with GameObserver {
     clearBetBtn = new Button("Löschen") {
       onAction = _ =>
         currentBet = 0.0
-        betLabel.text = "Einsatz: €0.00"
+        betLabel.text = f"Einsatz: €$currentBet%.2f"
         placeBetBtn.disable = true
         chipBox.disable = false
     }
@@ -110,11 +122,14 @@ object BlackjackGuiApp extends JFXApp3 with GameObserver {
     val deckBox = new VBox(new Label("Deck"), deckStack)
     deckBox.alignment = Pos.TopCenter
 
-    val hitBtn   = createActionButton("Hit",    () => controller.playerHit(),   "Hit")
-    val standBtn = createActionButton("Stand",  () => {
-      animateDealerOnDealerTurn = true
-      controller.playerStand()
-    }, "Stand")
+    val hitBtn = new Button("Hit") {
+      onAction = _ => controller.playerHit()
+    }
+    val standBtn = new Button("Stand") {
+      onAction = _ =>
+        animateDealerOnDealerTurn = true
+        controller.playerStand()
+    }
     val dblBtn   = new Button("Double") {
       onAction = _ => {
         animateDoublePlacement = true
@@ -128,7 +143,9 @@ object BlackjackGuiApp extends JFXApp3 with GameObserver {
         }
       }
     }
-    val splBtn   = createActionButton("Split",  () => controller.playerSplit(), "Split")
+    val splBtn = new Button("Split") {
+      onAction = _ => controller.playerSplit()
+    }
     val undoBtn  = new Button("Undo") { onAction = _ => controller.undo().foreach(_ => ()) }
     val redoBtn  = new Button("Redo") { onAction = _ => controller.redo().foreach(_ => ()) }
     val quitBtn  = new Button("Quit") { onAction = _ => sys.exit(0) }
@@ -163,12 +180,12 @@ object BlackjackGuiApp extends JFXApp3 with GameObserver {
   }
 
   override def update(gs: GameState): Unit = {
-    budgetLabel.text = f"€${controller.getBudget}%.2f"
+    budgetLabel.text = f"€${betSvc.budget}%.2f"
 
     // Double-Placement Animation
     if (animateDoublePlacement && gs.playerHands.head.cards.size > 2) {
       val card = gs.playerHands(gs.activeHand).cards.last
-      animateCrossDeal(playerArea, card)
+      anim.doublePlacement(playerArea,card)
       animateDoublePlacement      = false
       animateDealerOnDealerTurn   = true
     }
@@ -177,7 +194,7 @@ object BlackjackGuiApp extends JFXApp3 with GameObserver {
     gs.phase match {
       case PlayerTurn =>
         showGameScreen()
-        renderPartialInGui(gs)
+        renderHands(gs)
 
       case PlayerBustPhase =>
         animateDealerOnDealerTurn = true
@@ -201,13 +218,32 @@ object BlackjackGuiApp extends JFXApp3 with GameObserver {
       case _ => // nichts
     }
   }
-
+  private def renderHands(gs: GameState): Unit = {
+    dealerArea.children.clear()
+    playerArea.children.clear()
+    gs.dealer.cards.headOption.foreach(c => anim.dealCard(dealerArea,c))
+    dealerArea.children.add(deckStack.children.head)
+    gs.playerHands.zipWithIndex.foreach{
+      case (hand, idx) => 
+        val box = new VBox(5)
+        val lbl = new Label(s"Hand ${idx + 1}"){
+          if (idx == gs.activeHand) style = "-fx-font-weight:bold"
+        }
+        box.children.add(lbl)
+        val container : Pane = 
+          if (gs.playerHands.size > 1) new VBox(10)
+          else new HBox(10)
+        hand.cards.foreach(c => anim.dealCard(container,c))   
+        box.children.add(container)
+        box.padding = Insets(10)
+        playerArea.children.add(box)
+    }
+  }
   /** Startet die Reveal-Animation und dann den Draw-Loop */
   private def dealerDrawLoop(): Unit = {
     val gs0 = controller.getState
     if (gs0.dealer.cards.size >= 2)
-      animateDealerReveal(gs0.dealer.cards(1))
-
+      anim.revealCard(dealerArea, gs0.dealer.cards(1),1)
     new PauseTransition(Duration(400)) { onFinished = _ => drawNext() }.play()
   }
 
@@ -216,9 +252,9 @@ object BlackjackGuiApp extends JFXApp3 with GameObserver {
     val gs = controller.getState
     if (gs.dealer.value < 17) {
       controller.dealerHit() match {
-        case Success(_) =>
-          val newCard = controller.getState.dealer.cards.last
-          animateDeal(dealerArea, newCard)
+        case Success(newState) =>
+          val card = newState.dealer.cards.last
+          anim.dealCard(dealerArea,card)
           new PauseTransition(Duration(600)) { onFinished = _ => drawNext() }.play()
         case Failure(ex) =>
           new Alert(Alert.AlertType.Error) {
@@ -257,84 +293,8 @@ object BlackjackGuiApp extends JFXApp3 with GameObserver {
     resultText.text = text + f"\nGewinn dieser Runde: €$win%.2f"
   }
 
-  private def renderPartialInGui(gs: GameState): Unit = {
-    dealerArea.children.clear()
-    playerArea.children.clear()
-
-    // Dealer: erste Karte + verdeckt
-    gs.dealer.cards.headOption.foreach(c => dealerArea.children.add(loadCardImage(c)))
-    dealerArea.children.add(loadBackImage())
-
-    // Spieler-Hände
-    gs.playerHands.zipWithIndex.foreach { case (hand, idx) =>
-      val handBox = new VBox(5)
-      val lbl = new Label(s"Hand ${idx + 1}") {
-        if (idx == gs.activeHand) style = "-fx-font-weight: bold; -fx-underline: true"
-      }
-      handBox.children.add(lbl)
-
-      // Horizontal oder vertical, je nach Split
-      val container: Pane = if (gs.playerHands.size > 1) new VBox(10) else new HBox(10)
-      hand.cards.foreach { card => animateDeal(container, card) }
-
-      handBox.children.add(container)
-      handBox.padding = Insets(10)
-      playerArea.children.add(handBox)
-    }
-  }
-
-  private def animateDealerReveal(card: Card): Unit = {
-    dealerArea.children.lift(1) match {
-      case Some(backView: javafx.scene.image.ImageView) =>
-        val flip1 = new RotateTransition(Duration(300), backView) {
-          fromAngle = 0; toAngle = 90; axis = new Point3D(0, 1, 0)
-        }
-        flip1.onFinished = _ => {
-          dealerArea.children.remove(backView)
-          val frontView = loadCardImage(card); frontView.rotate = -90
-          dealerArea.children.add(frontView)
-          val flip2 = new RotateTransition(Duration(300), frontView) {
-            fromAngle = -90; toAngle = 0; axis = new Point3D(0, 1, 0)
-          }
-          flip2.play()
-        }
-        flip1.play()
-      case _ =>
-    }
-  }
-
-  private def animateDeal(target: Pane, card: Card): Unit = {
-    val cardView = loadCardImage(card)
-    cardView.opacity = 0
-    target.children.add(cardView)
-    val translate = new TranslateTransition(Duration(400), cardView) {
-      fromX = deckStack.layoutX.value - cardView.layoutX.value
-      fromY = deckStack.layoutY.value - cardView.layoutY.value
-      toX   = 0; toY = 0
-    }
-    translate.onFinished = _ => {
-      cardView.opacity = 1
-      val flip = new RotateTransition(Duration(300), cardView) {
-        fromAngle = -90; toAngle = 0; axis = new Point3D(0, 1, 0)
-      }
-      flip.play()
-    }
-    translate.play()
-  }
-
-  private def animateCrossDeal(target: Pane, card: Card): Unit = {
-    val cardView = loadCardImage(card)
-    cardView.rotate  = 90
-    cardView.opacity = 0
-    target.children.add(cardView)
-    val translate = new TranslateTransition(Duration(400), cardView) {
-      fromX = deckStack.layoutX.value - cardView.layoutX.value
-      fromY = deckStack.layoutY.value - cardView.layoutY.value
-      toX   = 0; toY = 0
-    }
-    translate.onFinished = _ => cardView.opacity = 1
-    translate.play()
-  }
+  
+  
 
   private def renderFullText(gs: GameState): String = {
     def hBorder(c: Char = '='): String = c.toString * 40
@@ -364,13 +324,12 @@ object BlackjackGuiApp extends JFXApp3 with GameObserver {
   private def createChipBox(): HBox = new HBox(15) {
     padding = Insets(10)
     children = chipValues.map { v =>
-      val iv = new ImageView(new Image(getClass.getResourceAsStream(s"/img/chips/chip$v.png"))) {
+      new ImageView(new Image(getClass.getResourceAsStream(s"/img/chips/chip$v.png"))) {
         fitWidth = 60; fitHeight = 60
         onMouseClicked = _ => {
           currentBet += v; betLabel.text = f"Einsatz: €$currentBet%.2f"; placeBetBtn.disable = false
         }
       }
-      iv
     }
   }
 

@@ -1,7 +1,9 @@
 package de.htwg.blackjack.factory
+import de.htwg.blackjack.model.deck.IDeckFactory
 import de.htwg.blackjack.model.{Card, Deck, Rank, Suits}
+
 import scala.annotation.tailrec
-object StandardDeckFactory extends DeckFactory {
+object StandardDeckFactory extends IDeckFactory {
   def newDeck: Deck = Deck.shuffled(buildDeck(StandardCardFactory.allRanks.toList, StandardCardFactory.allSuits.toList))
   private def buildDeck(ranks: List[Rank], suits: List[Suits]): List[Card] = {
     @tailrec

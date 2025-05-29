@@ -14,5 +14,8 @@ trait IGameController {
   def resolveBet(): Unit
   def addObserver(obs: GameObserver): Unit
   def removeObserver(obs: GameObserver): Unit
-  def dealerHit(): Try[GameState]
+  def undo(): Option[GameState]
+  def redo(): Option[GameState]
+  def getLastRoundWin: Double
+
 }
