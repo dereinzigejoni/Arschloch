@@ -3,27 +3,38 @@ import de.htwg.blackjack.command.*
 import de.htwg.blackjack.factory.StandardDeckFactory
 import de.htwg.blackjack.model.*
 import de.htwg.blackjack.state.GamePhases
-import de.htwg.blackjack.state.GamePhases.{DealerBustPhase, DealerTurn, PlayerTurn}
+import de.htwg.blackjack.state.GamePhases.{DealerBustPhase, DealerTurn, Payout, PlayerTurn}
 import de.htwg.blackjack.strategy.ConservativeDealer
 import de.htwg.blackjack.strategy.interfacE.DealerStrategy
+
 import scala.compiletime.uninitialized
 import scala.util.Try
-class GameController(dealerStrat: DealerStrategy = new ConservativeDealer) {
+class GameController(dealerStrat: DealerStrategy = new ConservativeDealer) extends IGameController with GameObserver {
+  private var lastRoundWin: Double = 0.0
   private var budget: Double     = 4000.0
   private var currentBet: Double = 0.0
   private var state: GameState  = uninitialized
   private var observers: List[GameObserver] = Nil
   private var history: List[(GameState, Double, Command)] = Nil
   private val invoker = new CommandInvoker(this)
+  override def getBudget: Double = budget
+  override def getState: GameState = state
+  override def tryplaceBet(amount: Double): Try[Unit] = Try(placeBet(amount))
+  override def playerHit(): Try[GameState] = invoker.execute(HitCommand)
+  override def playerStand(): Try[GameState] = invoker.execute(StandCommand)
+  override def playerDouble(): Try[GameState] = invoker.execute(DoubleCommand)
+  override def playerSplit(): Try[GameState] = invoker.execute(SplitCommand)
+  override def addObserver(obs: GameObserver): Unit = observers ::= obs
+  override def removeObserver(obs: GameObserver): Unit = observers = observers.filterNot(_ == obs)
+  override def update(gs: GameState): Unit = notifyObservers()
+
   def setStateInternal(gs: GameState): Unit = {
     state = gs
     notifyObservers()
   }
-  def addObserver(obs: GameObserver): Unit = observers ::= obs
-  def removeObserver(obs: GameObserver): Unit = observers = observers.filterNot(_ == obs)
+
+
   private def notifyObservers(): Unit = observers.foreach(_.update(state))
-  def getBudget: Double = budget
-  def getState: GameState = state
   def setState(s: GameState): Unit = state = s
   def setBudget(b: Double): Unit = budget = b
   def execute(cmd: Command): Try[GameState] = {
@@ -67,11 +78,7 @@ class GameController(dealerStrat: DealerStrategy = new ConservativeDealer) {
       currentBet = bet
     )
   }
-  def tryPlaceBet(bet: Double): Try[Unit] = Try(placeBet(bet))
-  def playerHit(): Try[GameState] = invoker.execute(HitCommand)
-  def playerStand(): Try[GameState] = invoker.execute(StandCommand)
-  def playerDouble(): Try[GameState] = invoker.execute(DoubleCommand)
-  def playerSplit(): Try[GameState] = invoker.execute(SplitCommand)
+
   def undo(): Option[GameState] = {
     val res = invoker.undo()
     res.foreach(_ => notifyObservers())
@@ -83,14 +90,31 @@ class GameController(dealerStrat: DealerStrategy = new ConservativeDealer) {
     res
   }
   private def dealerPlay(): Unit = state = state.phase.stand(state)
-  def resolveBet(): Unit = {
-    val newState = GamePhases.Payout(state).pay(state)
-    state = newState
-    budget = newState.budget // Controller-Budget auf den neuen Stand setzen
+
+  /** Endrunde: Berechne Auszahlung, update Budget und State */
+  override def resolveBet(): Unit = {
+    val oldBudget = budget
+    // Payout für Gewinne/Blackjack
+    val paidState = Payout(state).pay(state)
+    state = paidState
+    budget = paidState.budget
+    // Push: Einsatz zurückgeben
+    val dealerValue = state.dealer.value
+    state.playerHands.zip(state.bets).foreach { case (hand, bet) =>
+      if (hand.value <= 21 && dealerValue <= 21 && hand.value == dealerValue) {
+        budget += bet
+      }
+    }
+    // Speichere runden-spezifischen Gewinn
+    lastRoundWin = budget - oldBudget
     notifyObservers()
   }
 
-  def dealerHit(): Try[GameState] = Try {
+  /** Liefert den Reingewinn der zuletzt abgeschlossenen Runde */
+  def getLastRoundWin: Double = lastRoundWin
+
+
+  override def dealerHit(): Try[GameState] = Try {
     val (card, newDeck) = state.deck.draw()
     val newDealerHand = state.dealer.add(card)
     val newPhase = if (newDealerHand.value > 21) DealerBustPhase else DealerTurn
