@@ -1,14 +1,17 @@
 package de.htwg.blackjack.main
-
 import de.htwg.blackjack.GUI.BlackjackGuiApp
+import de.htwg.blackjack.controller.SharedGameController
+import de.htwg.blackjack.util.ObservableSync
 import de.htwg.blackjack.view.TuiView
-import javafx.application.Application
 
 object Main {
   def main(args: Array[String]): Unit = {
-    // start the TUI in parallel
-    new Thread(() => TuiView.run(), "TUI-Thread").start()
-    // launch the ScalaFX GUI
+    val controller = SharedGameController.instance
+    val sync = new ObservableSync()
+    val tui = new TuiView(controller, sync)
+    new Thread(new Runnable {
+      override def run(): Unit = tui.run()
+    }, "TUI-Thread").start()
     BlackjackGuiApp.main(args)
   }
 }

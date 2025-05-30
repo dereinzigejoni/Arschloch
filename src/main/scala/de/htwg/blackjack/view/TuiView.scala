@@ -2,11 +2,12 @@
 package de.htwg.blackjack.view
 
 import scala.util.{Failure, Success, Try}
-import de.htwg.blackjack.controller.{SharedGameController, GameObserver}
+import de.htwg.blackjack.controller.{GameObserver, IGameController, SharedGameController}
 import de.htwg.blackjack.model.*
 import de.htwg.blackjack.state.GamePhases.*
+import de.htwg.blackjack.util.ObservableSync
 
-object TuiView extends GameObserver{
+class TuiView(contr: IGameController, sync: ObservableSync) extends GameObserver{
   private val controller = SharedGameController.instance
   controller.addObserver(this)
   private val lineWidth = 40
@@ -15,6 +16,7 @@ object TuiView extends GameObserver{
     val padding = (lineWidth - text.length) / 2
     " " * padding + text + " " * (lineWidth - text.length - padding)
   }
+
 
   override def update(gs: GameState): Unit = {
     gs.phase match {
@@ -52,13 +54,14 @@ object TuiView extends GameObserver{
     case Failure(ex) => println(s"Fehler bei $action: ${ex.getMessage}")
   }
   def run(): Unit = {
-    //printWelcome()
+    printWelcome()
     
     var playing = true
     askBet() // löst über Observer initiales renderPartial() aus
     
     while (playing) {
-      printMenu()
+      sync.waitForUpdate()
+      //printMenu()
       scala.util.Try(scala.io.StdIn.readLine().trim.toUpperCase) match {
         case scala.util.Failure(ex) => println(s"Eingabefehler: ${ex.getMessage}")
         
