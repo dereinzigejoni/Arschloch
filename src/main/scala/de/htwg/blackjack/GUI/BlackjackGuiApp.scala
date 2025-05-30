@@ -1,32 +1,41 @@
-package de.htwg.blackjack.gui
+package de.htwg.blackjack.GUI
 
-import de.htwg.blackjack.GUI.{IAnimationService, IGameView}
 import de.htwg.blackjack.bet.IBetService
-import scalafx.application.JFXApp3
-import scalafx.scene.Scene
-import scalafx.scene.layout.*
-import scalafx.scene.control.*
-import scalafx.scene.image.*
-import scalafx.geometry.*
-import scalafx.Includes.*
-import de.htwg.blackjack.controller.{GameObserver, IGameController, SharedGameController}
+import de.htwg.blackjack.controller.{GameObserver, IGameController}
 import de.htwg.blackjack.di.ApplicationContext
 import de.htwg.blackjack.model.deck.IDeckFactory
 import de.htwg.blackjack.model.{Card, GameState}
 import de.htwg.blackjack.state.GamePhases.*
+import scalafx.animation.PauseTransition
+import scalafx.application.JFXApp3
 import scalafx.application.JFXApp3.PrimaryStage
-import scalafx.animation.{PauseTransition, RotateTransition, TranslateTransition}
+import scalafx.geometry.*
+import scalafx.scene.Scene
+import scalafx.scene.control.*
+import scalafx.scene.image.*
+import scalafx.scene.layout.*
 import scalafx.scene.media.{Media, MediaPlayer}
 import scalafx.util.Duration
-import javafx.geometry.Point3D
 
 import scala.compiletime.uninitialized
 import scala.util.{Failure, Success, Try}
 object BlackjackGuiApp extends JFXApp3 with GameObserver with IGameView {
+
+  private def resetBoard(): Unit = {
+    // alle angezeigten Karten entfernen
+    dealerArea.children.clear()
+    playerArea.children.clear()
+    // Deck-Stapel neu bauen
+    deckStack.children.clear()
+    val back = loadBackImage()
+    back.rotate = 180
+    deckStack.children.add(back)
+  }
+
   // --- Interfaces aus dem ApplicationContext ---
   private val controller: IGameController = ApplicationContext.gameController
   private val betSvc: IBetService = ApplicationContext.betService
-  private val anim: IAnimationService = ApplicationContext.animationService
+  private var anim: IAnimationService = uninitialized
   private val deckFac: IDeckFactory = ApplicationContext.deckFactory
   //private val controller = SharedGameController.instance
   controller.addObserver(this)
@@ -35,8 +44,8 @@ object BlackjackGuiApp extends JFXApp3 with GameObserver with IGameView {
   private val chipValues = Seq(1, 10, 25, 50, 100, 500, 1000)
   private var animateDealerOnDealerTurn = false
   private var animateDoublePlacement       = false
-  
-  
+
+
 
   // UI-Panes
   private var welcomePane: VBox    = uninitialized
@@ -73,16 +82,16 @@ object BlackjackGuiApp extends JFXApp3 with GameObserver with IGameView {
     welcomePane.alignment = Pos.Center
 
     // --- Bet Pane ---
-    budgetLabel = new Label()
-    betLabel    = new Label(f"Einsatz: €${betSvc.currentBet}%.2f")
+    budgetLabel = new Label(f"€${controller.getBudget}%.2f")
+    betLabel    = new Label(f"Einsatz: €0")
     placeBetBtn = new Button("Einsatz platzieren") {
       disable = true
-      onAction = _ => betSvc.placeBet(currentBet) match {
+      onAction = _ => controller.tryplaceBet(currentBet) match {
         case Success(_) =>
           disable         = true
           chipBox.disable = true
           //controller.setStateInternal(controller.getState)
-          controller.getState
+          //controller.getState
         case Failure(ex) =>
           new Alert(Alert.AlertType.Error) {
             initOwner(stage)
@@ -144,7 +153,7 @@ object BlackjackGuiApp extends JFXApp3 with GameObserver with IGameView {
       }
     }
     val splBtn = new Button("Split") {
-      onAction = _ => controller.playerSplit()
+      onAction = _ =>  wrap(controller.playerSplit(), "Split")
     }
     val undoBtn  = new Button("Undo") { onAction = _ => controller.undo().foreach(_ => ()) }
     val redoBtn  = new Button("Redo") { onAction = _ => controller.redo().foreach(_ => ()) }
@@ -160,6 +169,8 @@ object BlackjackGuiApp extends JFXApp3 with GameObserver with IGameView {
     )
     gamePane.padding   = Insets(20)
     gamePane.alignment = Pos.TopCenter
+    anim = ApplicationContext.animationService(deckStack)
+
 
     // --- Result Pane ---
     resultText = new TextArea { editable = false; wrapText = true }
@@ -197,6 +208,11 @@ object BlackjackGuiApp extends JFXApp3 with GameObserver with IGameView {
         renderHands(gs)
 
       case PlayerBustPhase =>
+        // erst einmal Bust-Status anzeigen…
+        showGameScreen()
+        renderHands(gs)
+
+        // …und dann den Auto-Stand anstoßen
         animateDealerOnDealerTurn = true
         controller.playerStand().failed.foreach { ex =>
           new Alert(Alert.AlertType.Error) {
@@ -205,6 +221,7 @@ object BlackjackGuiApp extends JFXApp3 with GameObserver with IGameView {
             contentText = ex.getMessage
           }.showAndWait()
         }
+
 
       case DealerTurn if animateDealerOnDealerTurn =>
         animateDealerOnDealerTurn = false
@@ -215,30 +232,42 @@ object BlackjackGuiApp extends JFXApp3 with GameObserver with IGameView {
         controller.resolveBet()
         showResultScreen(renderFullText(gs))
 
+
+
       case _ => // nichts
     }
   }
+
   private def renderHands(gs: GameState): Unit = {
     dealerArea.children.clear()
     playerArea.children.clear()
-    gs.dealer.cards.headOption.foreach(c => anim.dealCard(dealerArea,c))
-    dealerArea.children.add(deckStack.children.head)
-    gs.playerHands.zipWithIndex.foreach{
-      case (hand, idx) => 
-        val box = new VBox(5)
-        val lbl = new Label(s"Hand ${idx + 1}"){
-          if (idx == gs.activeHand) style = "-fx-font-weight:bold"
-        }
-        box.children.add(lbl)
-        val container : Pane = 
-          if (gs.playerHands.size > 1) new VBox(10)
-          else new HBox(10)
-        hand.cards.foreach(c => anim.dealCard(container,c))   
-        box.children.add(container)
-        box.padding = Insets(10)
-        playerArea.children.add(box)
+
+    // offene Dealer-Karte
+    gs.dealer.cards.headOption.foreach(c => anim.dealCard(dealerArea, c))
+
+    // verdeckte Dealer-Karte (neu erzeugt, bleibt im Deck unverändert)
+    val hiddenCard = loadBackImage()
+    hiddenCard.rotate = 180
+    dealerArea.children.add(hiddenCard)
+
+    // alle Spieler-Hände rendern
+    gs.playerHands.zipWithIndex.foreach { case (hand, idx) =>
+      val box = new VBox(5)
+      val lbl = new Label(s"Hand ${idx + 1}") {
+        if (idx == gs.activeHand) style = "-fx-font-weight:bold"
+      }
+      box.children.add(lbl)
+      // wenn gesplittet, Spalte, sonst Zeile
+      val container: Pane =
+        if (gs.playerHands.size > 1) new VBox(10)
+        else new HBox(10)
+      hand.cards.foreach(c => anim.dealCard(container, c))
+      box.children.add(container)
+      box.padding = Insets(10)
+      playerArea.children.add(box)
     }
   }
+
   /** Startet die Reveal-Animation und dann den Draw-Loop */
   private def dealerDrawLoop(): Unit = {
     val gs0 = controller.getState
@@ -277,10 +306,17 @@ object BlackjackGuiApp extends JFXApp3 with GameObserver with IGameView {
     gamePane.visible    = false; resultPane.visible = false
   }
   private def showBetScreen(): Unit = {
-    welcomePane.visible = false; betPane.visible = true
-    gamePane.visible    = false; resultPane.visible = false
-    currentBet = 0.0; betLabel.text = "Einsatz: €0.00"
-    chipBox.disable = false; placeBetBtn.disable = true
+
+    resetBoard() // <— hier das Board zurücksetzen
+    welcomePane.visible = false
+    betPane.visible = true
+    gamePane.visible = false
+    resultPane.visible = false
+
+    currentBet = 0.0
+    betLabel.text = f"Einsatz: €$currentBet%.2f"
+    chipBox.disable = false
+    placeBetBtn.disable = true
   }
   private def showGameScreen(): Unit = {
     welcomePane.visible = false; betPane.visible = false
@@ -293,8 +329,8 @@ object BlackjackGuiApp extends JFXApp3 with GameObserver with IGameView {
     resultText.text = text + f"\nGewinn dieser Runde: €$win%.2f"
   }
 
-  
-  
+
+
 
   private def renderFullText(gs: GameState): String = {
     def hBorder(c: Char = '='): String = c.toString * 40
@@ -359,6 +395,7 @@ object BlackjackGuiApp extends JFXApp3 with GameObserver with IGameView {
     val key = c.suit.toString + c.rank.symbol
     new ImageView(cardCache(key)) { fitWidth = 80; fitHeight = 120 }
   }
+
 
   private def loadBackImage(): ImageView = {
     new ImageView(cardCache("back")) { fitWidth = 80; fitHeight = 120 }

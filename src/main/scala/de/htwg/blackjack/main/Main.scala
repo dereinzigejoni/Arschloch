@@ -1,12 +1,14 @@
 package de.htwg.blackjack.main
+
 import de.htwg.blackjack.GUI.BlackjackGuiApp
 import de.htwg.blackjack.view.TuiView
+import javafx.application.Application
 
 object Main {
   def main(args: Array[String]): Unit = {
-    // TUI parallel starten
+    // start the TUI in parallel
     new Thread(() => TuiView.run(), "TUI-Thread").start()
-    // GUI-App starten
+    // launch the ScalaFX GUI
     BlackjackGuiApp.main(args)
   }
 }

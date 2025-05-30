@@ -38,14 +38,19 @@ class GameController(dealerStrat: DealerStrategy = new ConservativeDealer) exten
   def setState(s: GameState): Unit = state = s
   def setBudget(b: Double): Unit = budget = b
   def execute(cmd: Command): Try[GameState] = {
-    val oldState = state
+    val oldState  = state
     val oldBudget = state.budget
     cmd.execute(state).map { newState =>
       history = (oldState, oldBudget, cmd) :: history
-      state = newState
+      state   = newState
+
+      // ← HIER hinzufügen:
+      notifyObservers()
+
       newState
     }
   }
+
   def placeBet(bet: Double): Unit = {
     if (bet <= 0) throw new IllegalArgumentException("Einsatz muss > 0 sein")
     if (bet > budget * 0.9)

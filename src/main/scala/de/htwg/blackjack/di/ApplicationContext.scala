@@ -5,6 +5,9 @@ import de.htwg.blackjack.GUI.{CardImageProvider, IAnimationService, ICardImagePr
 import de.htwg.blackjack.controller.{GameController, IGameController}
 import de.htwg.blackjack.bet.{BetService, IBetService}
 import de.htwg.blackjack.GUI.AnimationService
+import scalafx.scene.layout.Pane
+
+import scala.language.postfixOps
 // **Richtiges** Interface importieren:
 import de.htwg.blackjack.model.deck.IDeckFactory
 // und Deine Factory
@@ -18,6 +21,5 @@ object ApplicationContext {
   lazy val deckFactory:   IDeckFactory           = StandardDeckFactory
 
   lazy val cardImageProvider: ICardImageProvider = new CardImageProvider()
-  lazy val animationService:  IAnimationService   =
-    new AnimationService(/* deckPane */ null, cardImageProvider)
+  def animationService(deckPane: Pane): IAnimationService = new AnimationService(deckPane, cardImageProvider)
 }
