@@ -4,14 +4,13 @@ import de.htwg.blackjack.controller.SharedGameController
 import de.htwg.blackjack.util.ObservableSync
 import de.htwg.blackjack.view.TuiView
 
+// in Main.scala
 object Main {
-  def main(args: Array[String]): Unit = {
+  def main(args: Array[String]]): Unit = {
     val controller = SharedGameController.instance
-    val sync = new ObservableSync()
-    val tui = new TuiView(controller, sync)
-    new Thread(new Runnable {
-      override def run(): Unit = tui.run()
-    }, "TUI-Thread").start()
+    controller.addObserver(new TuiView)            // <-- TUI-View als Observer
+    controller.addObserver(BlackjackGuiApp)        // <-- GUI-View als Observer
     BlackjackGuiApp.main(args)
   }
 }
+
