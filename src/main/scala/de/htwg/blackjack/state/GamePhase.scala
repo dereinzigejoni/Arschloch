@@ -57,7 +57,7 @@ object GamePhases {
           gs.deck.cards.size >= 2
       ) {
         val bet = gs.bets(idx)
-        val (c1 :: c2 :: Nil) = hand.cards
+        val (c1 :: c2 :: Nil) = (hand.cards: @unchecked)
         val (cardA, d2) = gs.deck.draw()
         val (cardB, d3) = d2.draw()
 

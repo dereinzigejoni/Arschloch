@@ -1,12 +1,13 @@
 // src/main/scala/de/htwg/blackjack/gui/card/CardImageProvider.scala
 package de.htwg.blackjack.GUI
 
+import com.google.inject.Inject
 import de.htwg.blackjack.model.Card
 import scalafx.scene.image.{Image, ImageView}
 
 import scala.collection.mutable
 
-class CardImageProvider extends ICardImageProvider {
+class CardImageProvider @Inject extends ICardImageProvider {
   // Cache wie gehabt
   private val cardCache = mutable.Map.empty[String, Image]
   preload()

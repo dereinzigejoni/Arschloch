@@ -1,6 +1,7 @@
 // src/main/scala/de/htwg/blackjack/view/TuiView.scala
 package de.htwg.blackjack.view
 
+import com.google.inject.Inject
 import de.htwg.blackjack.controller.{GameObserver, IGameController, SharedGameController}
 import de.htwg.blackjack.model.*
 import de.htwg.blackjack.state.GamePhases.*
@@ -8,7 +9,7 @@ import de.htwg.blackjack.util.ObservableSync
 
 import scala.util.{Failure, Success, Try}
 
-class TuiView(contr: IGameController) extends GameObserver{
+class TuiView @Inject()(contr: IGameController) extends GameObserver{
   var sync = new ObservableSync
   private val controller = SharedGameController.instance
   controller.addObserver(this)

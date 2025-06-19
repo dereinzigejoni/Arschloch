@@ -1,17 +1,18 @@
 // src/main/scala/de/htwg/blackjack/gui/animation/AnimationService.scala
 package de.htwg.blackjack.GUI
 
+import com.google.inject.Inject
 import de.htwg.blackjack.model.Card
 import scalafx.scene.layout.Pane
 import scalafx.animation.{PauseTransition, RotateTransition, TranslateTransition}
 import scalafx.util.Duration
 import scalafx.geometry.Point3D
-import scalafx.scene.image.ImageView // ScalaFX-Wrapper
-import scalafx.Includes._
-import javafx.scene.image.{ImageView => JfxImageView}
+import scalafx.scene.image.ImageView
+import scalafx.Includes.*
+import javafx.scene.image.ImageView as JfxImageView
 
 
-class AnimationService(deckPane: Pane, cardImgs: ICardImageProvider) extends IAnimationService{
+class AnimationService @Inject (deckPane: Pane, cardImgs: ICardImageProvider) extends IAnimationService{
   override def dealCard(target: Pane, card: Card): Unit = {
     // 1) val mit Typ
     val cardView: ImageView = cardImgs.loadCardImage(card)

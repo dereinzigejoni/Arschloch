@@ -1,5 +1,6 @@
 package de.htwg.blackjack.GUI
 
+import com.google.inject.Inject
 import de.htwg.blackjack.bet.IBetService
 import de.htwg.blackjack.controller.{GameObserver, IGameController}
 import de.htwg.blackjack.di.ApplicationContext
@@ -19,7 +20,11 @@ import scalafx.util.Duration
 
 import scala.compiletime.uninitialized
 import scala.util.{Failure, Success, Try}
-object BlackjackGuiApp extends JFXApp3 with GameObserver with IGameView {
+class BlackjackGuiApp @Inject()(
+                                 controller: IGameController,
+                                 betSvc:      IBetService,
+                                 deckFac:     IDeckFactory
+                               ) extends JFXApp3 with GameObserver with IGameView  {
 
   private def resetBoard(): Unit = {
     // alle angezeigten Karten entfernen
@@ -33,10 +38,7 @@ object BlackjackGuiApp extends JFXApp3 with GameObserver with IGameView {
   }
 
   // --- Interfaces aus dem ApplicationContext ---
-  private val controller: IGameController = ApplicationContext.gameController
-  private val betSvc: IBetService = ApplicationContext.betService
-  private var anim: IAnimationService = uninitialized
-  private val deckFac: IDeckFactory = ApplicationContext.deckFactory
+
   //private val controller = SharedGameController.instance
   controller.addObserver(this)
   // State für Einsatz
@@ -44,6 +46,7 @@ object BlackjackGuiApp extends JFXApp3 with GameObserver with IGameView {
   private val chipValues = Seq(1, 10, 25, 50, 100, 500, 1000)
   private var animateDealerOnDealerTurn = false
   private var animateDoublePlacement       = false
+  private var anim: IAnimationService = _
 
 
 
@@ -56,6 +59,7 @@ object BlackjackGuiApp extends JFXApp3 with GameObserver with IGameView {
 
   // UI-Controls
   private var budgetLabel: Label      = uninitialized
+  private var startBtn:       Button     = uninitialized
   private var betLabel: Label         = uninitialized
   private var placeBetBtn: Button     = uninitialized
   private var clearBetBtn: Button     = uninitialized
@@ -68,16 +72,19 @@ object BlackjackGuiApp extends JFXApp3 with GameObserver with IGameView {
   override def start(): Unit = startApp()
 
   override def startApp(): Unit = {
+
     // --- Background Music ---
     val media = new Media(getClass.getResource("/audio/background.mp3").toExternalForm)
     bgPlayer = new MediaPlayer(media) {
-      cycleCount = MediaPlayer.Indefinite
+      cycleCount = MediaPlayer.Indefinite;
       volume = 0.4
     }
     bgPlayer.play()
+    // **2)** Registriere den GUI‐Observer **hier**, nicht im Objekt-Kopf
+    controller.addObserver(this)
 
     // --- Welcome Pane ---
-    val startBtn = new Button("Start") { onAction = _ => showBetScreen() }
+    startBtn = new Button("Start") { onAction = _ => showBetScreen() }
     welcomePane = new VBox(20, new Label("WILLKOMMEN ZU BLACKJACK"), startBtn)
     welcomePane.alignment = Pos.Center
 
@@ -90,8 +97,7 @@ object BlackjackGuiApp extends JFXApp3 with GameObserver with IGameView {
         case Success(_) =>
           disable         = true
           chipBox.disable = true
-          //controller.setStateInternal(controller.getState)
-          //controller.getState
+          
         case Failure(ex) =>
           new Alert(Alert.AlertType.Error) {
             initOwner(stage)
@@ -128,6 +134,7 @@ object BlackjackGuiApp extends JFXApp3 with GameObserver with IGameView {
       children.add(back)
       padding = Insets(10)
     }
+    anim = ApplicationContext.animationService(deckStack)
     val deckBox = new VBox(new Label("Deck"), deckStack)
     deckBox.alignment = Pos.TopCenter
 
@@ -169,7 +176,7 @@ object BlackjackGuiApp extends JFXApp3 with GameObserver with IGameView {
     )
     gamePane.padding   = Insets(20)
     gamePane.alignment = Pos.TopCenter
-    anim = ApplicationContext.animationService(deckStack)
+    //anim = ApplicationContext.animationService(deckStack)
 
 
     // --- Result Pane ---

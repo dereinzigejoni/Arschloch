@@ -1,6 +1,7 @@
-ThisBuild / version := "0.1.0-SNAPSHOT"
+// build.sbt
+ThisBuild / scalaVersion := "3.5.0"
+ThisBuild / version      := "0.1.0-SNAPSHOT"
 ThisBuild / organization := "de.htwg.blackjack"
-ThisBuild / scalaVersion := "3.3.6"
 
 lazy val root = (project in file("."))
   // Scoverage aktivieren

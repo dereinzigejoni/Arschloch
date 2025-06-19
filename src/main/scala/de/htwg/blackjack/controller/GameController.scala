@@ -1,5 +1,6 @@
 package de.htwg.blackjack.controller
 
+import com.google.inject.Inject
 import de.htwg.blackjack.command.*
 import de.htwg.blackjack.factory.StandardDeckFactory
 import de.htwg.blackjack.model.*
@@ -11,7 +12,7 @@ import de.htwg.blackjack.util.ObservableSync
 
 import scala.compiletime.uninitialized
 import scala.util.Try
-class GameController(dealerStrat: DealerStrategy = new ConservativeDealer) extends IGameController with GameObserver {
+class GameController @Inject() (dealerStrat: DealerStrategy) extends IGameController with GameObserver  {
   private var lastRoundWin: Double = 0.0
   private var budget: Double     = 4000.0
   private var currentBet: Double = 0.0
