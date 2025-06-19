@@ -5,7 +5,6 @@ ThisBuild / organization := "de.htwg.blackjack"
 
 lazy val root = (project in file("."))
   // Scoverage aktivieren
-  .enablePlugins(ScoverageSbtPlugin)
   .settings(
     name := "Blackjack",
 
@@ -19,7 +18,6 @@ lazy val root = (project in file("."))
     ),
 
     // Scoverage‐Optionen
-    coverageHighlighting := true, // Highlighting im Report
 
     // Compiler-Options
     scalacOptions ++= Seq(
