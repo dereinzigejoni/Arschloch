@@ -43,18 +43,13 @@ class GameController(dealerStrat: DealerStrategy = new ConservativeDealer) exten
   def setState(s: GameState): Unit = state = s
   def setBudget(b: Double): Unit = budget = b
   def execute(cmd: Command): Try[GameState] = {
-    val oldState  = state
-    val oldBudget = state.budget
     cmd.execute(state).map { newState =>
-      history = (oldState, oldBudget, cmd) :: history
-      state   = newState
-
-      // ← HIER hinzufügen:
-      notifyObservers()
-
+      state = newState
+      notifyObservers()   // <— hier
       newState
     }
   }
+
 
   def placeBet(bet: Double): Unit = {
     if (bet <= 0) throw new IllegalArgumentException("Einsatz muss > 0 sein")
@@ -91,14 +86,22 @@ class GameController(dealerStrat: DealerStrategy = new ConservativeDealer) exten
 
   override def undo(): Option[GameState] = {
     val res = invoker.undo()
-    res.foreach(_ => notifyObservers())
+    res.foreach { s =>
+      state = s
+      notifyObservers()
+    }
     res
   }
+
   override def redo(): Option[GameState] = {
     val res = invoker.redo()
-    res.foreach(_ => notifyObservers())
+    res.foreach { s =>
+      state = s
+      notifyObservers()
+    }
     res
   }
+
   private def dealerPlay(): Unit = state = state.phase.stand(state)
 
   /** Endrunde: Berechne Auszahlung, update Budget und State */

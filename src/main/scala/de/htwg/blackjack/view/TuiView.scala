@@ -7,7 +7,8 @@ import de.htwg.blackjack.model.*
 import de.htwg.blackjack.state.GamePhases.*
 import de.htwg.blackjack.util.ObservableSync
 
-class TuiView(contr: IGameController, sync: ObservableSync) extends GameObserver{
+class TuiView(contr: IGameController) extends GameObserver{
+  var sync = new ObservableSync
   private val controller = SharedGameController.instance
   controller.addObserver(this)
   private val lineWidth = 40
