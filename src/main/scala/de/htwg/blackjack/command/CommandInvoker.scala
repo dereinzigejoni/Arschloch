@@ -1,9 +1,10 @@
 // src/main/scala/de/htwg/blackjack/command/CommandInvoker.scala
 package de.htwg.blackjack.command
 
-import scala.util.Try
 import de.htwg.blackjack.controller.GameController
 import de.htwg.blackjack.model.GameState
+
+import scala.util.Try
 class CommandInvoker(controller: GameController) {
   private var undoStack: List[GameState] = Nil
   private var redoStack: List[GameState] = Nil

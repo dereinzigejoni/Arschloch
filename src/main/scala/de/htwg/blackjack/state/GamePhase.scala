@@ -104,7 +104,7 @@ object GamePhases {
     def double(gs: GameState): GameState = gs
     def split(gs: GameState): GameState = gs
   }
-  
+
   case object FinishedPhase extends GamePhase {
     def hit(gs: GameState): GameState = gs
     def stand(gs: GameState): GameState = gs

@@ -2,6 +2,7 @@
 package de.htwg.blackjack.bet
 
 import de.htwg.blackjack.controller.IGameController
+
 import scala.util.Try
 
 class BetService(controller: IGameController) extends IBetService {

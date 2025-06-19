@@ -1,7 +1,6 @@
-// build.sbt
-ThisBuild / scalaVersion := "3.5.0"
-ThisBuild / version      := "0.1.0-SNAPSHOT"
+ThisBuild / version := "0.1.0-SNAPSHOT"
 ThisBuild / organization := "de.htwg.blackjack"
+ThisBuild / scalaVersion := "3.3.6"
 
 lazy val root = (project in file("."))
   // Scoverage aktivieren
@@ -12,7 +11,10 @@ lazy val root = (project in file("."))
     // Dependencies
     libraryDependencies ++= Seq(
       "org.scalafx" %% "scalafx" % "22.0.0-R33",
-      "org.scalatest"          %% "scalatest"   % "3.2.19" % Test
+      "org.scalatest"          %% "scalatest"   % "3.2.19" % Test,
+      "com.google.inject" % "guice" % "7.0.0"
+
+
     ),
 
     // Scoverage‐Optionen

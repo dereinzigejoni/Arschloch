@@ -1,5 +1,5 @@
 // src/main/scala/de/htwg/blackjack/Main.scala
-package de.htwg.blackjack
+package de.htwg.blackjack.main
 
 import de.htwg.blackjack.di.Module
 

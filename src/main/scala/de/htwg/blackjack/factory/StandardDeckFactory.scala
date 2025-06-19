@@ -1,4 +1,5 @@
 package de.htwg.blackjack.factory
+
 import de.htwg.blackjack.model.deck.IDeckFactory
 import de.htwg.blackjack.model.{Card, Deck, Rank, Suits}
 

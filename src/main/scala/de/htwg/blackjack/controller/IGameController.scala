@@ -1,5 +1,7 @@
 package de.htwg.blackjack.controller
+
 import de.htwg.blackjack.model.GameState
+
 import scala.util.Try
 
 trait IGameController {

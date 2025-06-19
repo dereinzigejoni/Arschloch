@@ -1,11 +1,12 @@
 // src/main/scala/de/htwg/blackjack/gui/animation/AnimationService.scala
 package de.htwg.blackjack.GUI
+
 import de.htwg.blackjack.model.Card
 import scalafx.scene.layout.Pane
 import scalafx.animation.{PauseTransition, RotateTransition, TranslateTransition}
 import scalafx.util.Duration
 import scalafx.geometry.Point3D
-import scalafx.scene.image.ImageView    // ScalaFX-Wrapper
+import scalafx.scene.image.ImageView // ScalaFX-Wrapper
 import scalafx.Includes._
 import javafx.scene.image.{ImageView => JfxImageView}
 

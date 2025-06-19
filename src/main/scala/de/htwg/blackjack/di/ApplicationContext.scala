@@ -2,12 +2,11 @@
 package de.htwg.blackjack.di
 
 import de.htwg.blackjack.GUI.*
-import scalafx.scene.layout.Pane
 
 object ApplicationContext {
-  val gameController = Module.controller
-  val betService     = Module.betService
-  val deckFactory    = Module.deckFactory
+  val gameController: Any = Modules.controller
+  val betService     = Modules.betService
+  val deckFactory    = Modules.deckFactory
 
   private val cardImageProvider = new CardImageProvider
 
