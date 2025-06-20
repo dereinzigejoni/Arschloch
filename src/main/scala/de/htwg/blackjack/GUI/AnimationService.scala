@@ -1,26 +1,18 @@
 // src/main/scala/de/htwg/blackjack/gui/animation/AnimationService.scala
 package de.htwg.blackjack.GUI
-
 import com.google.inject.Inject
 import de.htwg.blackjack.model.Card
-import scalafx.scene.layout.Pane
-import scalafx.animation.{PauseTransition, RotateTransition, TranslateTransition}
-import scalafx.util.Duration
+import javafx.scene.image.ImageView as JfxImageView
+import scalafx.animation.{RotateTransition, TranslateTransition}
 import scalafx.geometry.Point3D
 import scalafx.scene.image.ImageView
-import scalafx.Includes.*
-import javafx.scene.image.ImageView as JfxImageView
-
-
+import scalafx.scene.layout.Pane
+import scalafx.util.Duration
 class AnimationService @Inject (deckPane: Pane, cardImgs: ICardImageProvider) extends IAnimationService{
   override def dealCard(target: Pane, card: Card): Unit = {
-    // 1) val mit Typ
     val cardView: ImageView = cardImgs.loadCardImage(card)
-
-    // 2) Konfiguration
     cardView.opacity = 0
     target.children.add(cardView)
-
     val translate = new TranslateTransition(Duration(400), cardView) {
       fromX = deckPane.layoutX.value - cardView.layoutX.value
       fromY = deckPane.layoutY.value - cardView.layoutY.value
@@ -35,7 +27,6 @@ class AnimationService @Inject (deckPane: Pane, cardImgs: ICardImageProvider) ex
     }
     translate.play()
   }
-
   override def revealCard(target: Pane, card: Card, backIdx: Int): Unit = {
     target.children.lift(backIdx) match {
       case Some(backNode: JfxImageView) =>
@@ -60,7 +51,6 @@ class AnimationService @Inject (deckPane: Pane, cardImgs: ICardImageProvider) ex
         flip1.play()
 
       case _ =>
-      // either out of bounds or not an ImageView, do nothing
     }
   }
 

@@ -8,10 +8,8 @@ import scalafx.scene.image.{Image, ImageView}
 import scala.collection.mutable
 
 class CardImageProvider @Inject extends ICardImageProvider {
-  // Cache wie gehabt
   private val cardCache = mutable.Map.empty[String, Image]
   preload()
-
   private def preload(): Unit = {
     Option(getClass.getResourceAsStream("/img/cards/back.png")).foreach(is => cardCache("back") = new Image(is))
     val suits = Seq("Clubs","Diamonds","Heart","Spades")
@@ -24,14 +22,12 @@ class CardImageProvider @Inject extends ICardImageProvider {
       is <- Option(getClass.getResourceAsStream(path))
     } cardCache(key) = new Image(is)
   }
-
   override def loadCardImage(card: Card): ImageView = {
     val key = card.suit.toString + card.rank.symbol
     new ImageView(cardCache(key)) {
       fitWidth = 80; fitHeight = 120
     }
   }
-
   override def loadBackImage(): ImageView = {
     new ImageView(cardCache("back")) {
       fitWidth = 80; fitHeight = 120

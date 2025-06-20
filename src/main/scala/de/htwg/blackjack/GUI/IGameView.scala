@@ -1,5 +1,2 @@
 package de.htwg.blackjack.GUI
-
-trait IGameView {
-  def startApp(): Unit
-}
+trait IGameView { def startApp(): Unit}

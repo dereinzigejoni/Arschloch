@@ -1,5 +1,4 @@
 package de.htwg.blackjack.GUI
-
 import com.google.inject.Inject
 import de.htwg.blackjack.bet.IBetService
 import de.htwg.blackjack.controller.{GameObserver, IGameController}
@@ -17,7 +16,6 @@ import scalafx.scene.image.*
 import scalafx.scene.layout.*
 import scalafx.scene.media.{Media, MediaPlayer}
 import scalafx.util.Duration
-
 import scala.compiletime.uninitialized
 import scala.util.{Failure, Success, Try}
 class BlackjackGuiApp @Inject()(
