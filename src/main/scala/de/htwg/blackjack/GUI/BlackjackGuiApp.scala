@@ -14,8 +14,11 @@ import scalafx.scene.Scene
 import scalafx.scene.control.*
 import scalafx.scene.image.*
 import scalafx.scene.layout.*
-import scalafx.scene.media.{Media, MediaPlayer}
+import scalafx.scene.media.{AudioClip, Media, MediaPlayer}
+import scalafx.scene.paint.Color
+import scalafx.scene.text.Font
 import scalafx.util.Duration
+
 import scala.compiletime.uninitialized
 import scala.util.{Failure, Success, Try}
 class BlackjackGuiApp @Inject()(
@@ -67,10 +70,14 @@ class BlackjackGuiApp @Inject()(
   private var deckStack: StackPane    = uninitialized
   private var resultText: TextArea    = uninitialized
   private var bgPlayer: MediaPlayer   = uninitialized
+  private var chipSound: AudioClip = uninitialized
+  private var cardSound: AudioClip = uninitialized
   override def start(): Unit = startApp()
 
   override def startApp(): Unit = {
-
+    //---- Sounds laden -----
+    chipSound = new AudioClip(getClass.getResource("/audio/chip.mp3").toExternalForm)
+    cardSound = new AudioClip(getClass.getResource("/audio/card.mp3").toExternalForm)
     // --- Background Music ---
     val media = new Media(getClass.getResource("/audio/background.mp3").toExternalForm)
     bgPlayer = new MediaPlayer(media) {
@@ -82,9 +89,15 @@ class BlackjackGuiApp @Inject()(
     controller.addObserver(this)
 
     // --- Welcome Pane ---
-    startBtn = new Button("Start") { onAction = _ => showBetScreen() }
-    welcomePane = new VBox(20, new Label("WILLKOMMEN ZU BLACKJACK"), startBtn)
-    welcomePane.alignment = Pos.Center
+    val welcomeLabel = new Label("WILLKOMMEN ZU BLACKJACK") {
+      font = Font.font("Herculanum", 36)
+    }
+    val startBtn = new Button("Start") {
+      onAction = _ => showBetScreen()
+    }
+    welcomePane = new VBox(20, welcomeLabel, startBtn) {
+      alignment = Pos.Center
+    }
 
     // --- Bet Pane ---
     budgetLabel = new Label(f"€${controller.getBudget}%.2f")
@@ -95,7 +108,7 @@ class BlackjackGuiApp @Inject()(
         case Success(_) =>
           disable         = true
           chipBox.disable = true
-          
+
         case Failure(ex) =>
           new Alert(Alert.AlertType.Error) {
             initOwner(stage)
@@ -163,7 +176,11 @@ class BlackjackGuiApp @Inject()(
     val undoBtn  = new Button("Undo") { onAction = _ => controller.undo().foreach(_ => ()) }
     val redoBtn  = new Button("Redo") { onAction = _ => controller.redo().foreach(_ => ()) }
     val quitBtn  = new Button("Quit") { onAction = _ => sys.exit(0) }
-    val btnBox   = new HBox(10, Seq(hitBtn, standBtn, dblBtn, splBtn, undoBtn, redoBtn, quitBtn): _*)
+    val muteBtn = new ToggleButton("Mute"){
+      onAction = _ =>
+        if (selected.value) bgPlayer.pause() else bgPlayer.play()
+    }
+    val btnBox   = new HBox(10, Seq(hitBtn, standBtn, dblBtn, splBtn, undoBtn, redoBtn, quitBtn,muteBtn): _*)
 
     gamePane = new VBox(15,
       new HBox(50, new VBox(new Label("Dealer-Hand:"), dealerArea), deckBox),
@@ -174,7 +191,7 @@ class BlackjackGuiApp @Inject()(
     )
     gamePane.padding   = Insets(20)
     gamePane.alignment = Pos.TopCenter
-    //anim = ApplicationContext.animationService(deckStack)
+
 
 
     // --- Result Pane ---
@@ -188,10 +205,12 @@ class BlackjackGuiApp @Inject()(
     // --- Root Stack ---
     rootStack = new StackPane { children = Seq(welcomePane, betPane, gamePane, resultPane) }
     Seq(betPane, gamePane, resultPane).foreach(_.visible = false)
+    val scenes = new Scene(rootStack,1000,700)
+    scenes.getStylesheets.add(getClass.getResource("/style/styles.css").toExternalForm)
 
     stage = new PrimaryStage {
       title = "Blackjack"
-      scene = new Scene(rootStack, 1000, 700)
+      this.scene = scenes
     }
   }
 
@@ -368,6 +387,7 @@ class BlackjackGuiApp @Inject()(
       new ImageView(new Image(getClass.getResourceAsStream(s"/img/chips/chip$v.png"))) {
         fitWidth = 60; fitHeight = 60
         onMouseClicked = _ => {
+          chipSound.play()
           currentBet += v; betLabel.text = f"Einsatz: €$currentBet%.2f"; placeBetBtn.disable = false
         }
       }

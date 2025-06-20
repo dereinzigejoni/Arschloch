@@ -1,0 +1,13 @@
+/* src/main/resources/gui/style.css */
+
+/* Root-Pane Hintergrund */
+.root {
+    -fx-background-color: #00cd66;
+}
+
+/* Alle Labels, Buttons und TextAreas bekommen weiße Schrift */
+.label,
+.button,
+.text-area {
+    -fx-text-fill: black;
+}

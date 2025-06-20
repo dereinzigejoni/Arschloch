@@ -117,7 +117,8 @@ object GamePhases {
     def double(gs: GameState): GameState = gs
     def split(gs: GameState): GameState = gs
     def pay(gs: GameState): GameState = {
-      val payouts = oldState.playerHands
+      // für jede Hand den passenden Multiplikator ermitteln
+      val payouts: Seq[Double] = oldState.playerHands
         .zip(oldState.bets)
         .map { case (hand, bet) =>
           val multiplier = oldState.phase match {
@@ -127,14 +128,16 @@ object GamePhases {
               if (isNatural(hand)) 2.7 else 2.0
             case FinishedPhase if hand.value == oldState.dealer.value =>
               1.0
-            case _ => 0.0
+            case _ =>
+              0.0
           }
           bet * multiplier
         }
 
-      val total = payouts.sum
+      // Summe der Auszahlungen und Budget anpassen
+      val totalPayout = payouts.sum
       gs.copy(
-        budget     = gs.budget + total,
+        budget     = gs.budget + totalPayout,
         currentBet = 0.0,
         phase      = GameOver
       )
