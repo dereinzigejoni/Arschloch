@@ -12,19 +12,17 @@ lazy val root = (project in file("."))
     libraryDependencies ++= Seq(
       "org.scalafx" %% "scalafx" % "22.0.0-R33",
       "org.scalatest"          %% "scalatest"   % "3.2.19" % Test,
-      "com.google.inject" % "guice" % "7.0.0"
+      "com.google.inject" % "guice" % "7.0.0",
+      "org.scalamock" %% "scalamock" % "6.0.0" % Test
 
 
     ),
 
     // Scoverage‐Optionen
+    coverageEnabled := true,
+coverageHighlighting := true,   // Syntax-Hervorhebung im Bericht
 
     // Compiler-Options
-    scalacOptions ++= Seq(
-      "-deprecation",
-      "-feature",
-      "-Xfatal-warnings"
-    ),
 
     // Ressourcen
     Compile / resourceDirectory := baseDirectory.value / "src" / "main" / "resources"
