@@ -71,13 +71,11 @@ class BlackjackGuiApp @Inject()(
   private var resultText: TextArea    = uninitialized
   private var bgPlayer: MediaPlayer   = uninitialized
   private var chipSound: AudioClip = uninitialized
-  private var cardSound: AudioClip = uninitialized
   override def start(): Unit = startApp()
 
   override def startApp(): Unit = {
     //---- Sounds laden -----
     chipSound = new AudioClip(getClass.getResource("/audio/chip.mp3").toExternalForm)
-    cardSound = new AudioClip(getClass.getResource("/audio/card.mp3").toExternalForm)
     // --- Background Music ---
     val media = new Media(getClass.getResource("/audio/background.mp3").toExternalForm)
     bgPlayer = new MediaPlayer(media) {
@@ -266,27 +264,31 @@ class BlackjackGuiApp @Inject()(
     dealerArea.children.clear()
     playerArea.children.clear()
 
-    // offene Dealer-Karte
-    gs.dealer.cards.headOption.foreach(c => anim.dealCard(dealerArea, c))
+    // Dealer: erste Karte + Back
+    gs.dealer.cards.headOption.foreach(c => { anim.dealCard(dealerArea, c) })
+    val hidden = loadBackImage(); hidden.rotate = 180; dealerArea.children.add(hidden)
 
-    // verdeckte Dealer-Karte (neu erzeugt, bleibt im Deck unverändert)
-    val hiddenCard = loadBackImage()
-    hiddenCard.rotate = 180
-    dealerArea.children.add(hiddenCard)
-
-    // alle Spieler-Hände rendern
+    // Spieler-Hände
     gs.playerHands.zipWithIndex.foreach { case (hand, idx) =>
       val box = new VBox(5)
-      val lbl = new Label(s"Hand ${idx + 1}") {
+      // Hand-Label
+      val title = new Label(s"Hand ${idx + 1}") {
+        textFill = Color.White
         if (idx == gs.activeHand) style = "-fx-font-weight:bold"
       }
-      box.children.add(lbl)
-      // wenn gesplittet, Spalte, sonst Zeile
+      // Karten-Container (HBox oder VBox)
       val container: Pane =
-        if (gs.playerHands.size > 1) new VBox(10)
-        else new HBox(10)
-      hand.cards.foreach(c => anim.dealCard(container, c))
-      box.children.add(container)
+        if (gs.playerHands.size > 1) new VBox(10) else new HBox(10)
+      hand.cards.foreach { c =>
+        anim.dealCard(container, c)
+        //cardSound.play()
+      }
+      // Zähler-Label unter den Karten
+      val valueLabel = new Label(s"Wert: ${hand.value}") {
+        textFill = Color.White
+      }
+
+      box.children.addAll(title, container, valueLabel)
       box.padding = Insets(10)
       playerArea.children.add(box)
     }

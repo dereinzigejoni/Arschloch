@@ -8,7 +8,6 @@ import de.htwg.blackjack.state.GamePhases
 import de.htwg.blackjack.state.GamePhases.{DealerBustPhase, DealerTurn, Payout, PlayerTurn}
 import de.htwg.blackjack.strategy.ConservativeDealer
 import de.htwg.blackjack.strategy.interfacE.DealerStrategy
-import de.htwg.blackjack.util.ObservableSync
 
 import scala.compiletime.uninitialized
 import scala.util.Try
@@ -36,11 +35,11 @@ class GameController @Inject() (dealerStrat: DealerStrategy) extends IGameContro
     notifyObservers()
   }
 
-  private val observableSync = new ObservableSync()
+ 
 
   private def notifyObservers(): Unit = {
     observers.foreach(_.update(state))
-    observableSync.signalUpdate() // <<< condition.signalAll
+    
   }
   def setState(s: GameState): Unit = state = s
   def setBudget(b: Double): Unit = budget = b

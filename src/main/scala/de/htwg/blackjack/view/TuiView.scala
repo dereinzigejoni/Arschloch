@@ -5,12 +5,11 @@ import com.google.inject.Inject
 import de.htwg.blackjack.controller.{GameObserver, IGameController, SharedGameController}
 import de.htwg.blackjack.model.*
 import de.htwg.blackjack.state.GamePhases.*
-import de.htwg.blackjack.util.ObservableSync
+
 
 import scala.util.{Failure, Success, Try}
 
 class TuiView @Inject()(contr: IGameController) extends GameObserver{
-  var sync = new ObservableSync
   private val controller = SharedGameController.instance
   controller.addObserver(this)
   private val lineWidth = 40
@@ -63,7 +62,6 @@ class TuiView @Inject()(contr: IGameController) extends GameObserver{
     askBet() // löst über Observer initiales renderPartial() aus
     
     while (playing) {
-      sync.waitForUpdate()
       //printMenu()
       scala.util.Try(scala.io.StdIn.readLine().trim.toUpperCase) match {
         case scala.util.Failure(ex) => println(s"Eingabefehler: ${ex.getMessage}")
