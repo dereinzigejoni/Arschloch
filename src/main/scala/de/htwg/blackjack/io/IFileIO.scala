@@ -6,6 +6,6 @@ import scala.util.Try
 
 trait IFileIO {
   def save(gs: GameState, filePath: String): Try[Unit]
-  def load(filePath: String): Try[Unit]
+  def load(filePath: String): Try[GameState]
 
 }
