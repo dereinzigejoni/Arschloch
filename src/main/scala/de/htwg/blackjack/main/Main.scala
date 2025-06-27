@@ -18,7 +18,7 @@ object Main {
     val injector = Guice.createInjector(new BlackjackModule)
     val controller = injector.getInstance(classOf[IGameController])
     injector.getInstance(classOf[TuiView])
-    // 3) Beispiel-GameState erzeugen
+    //Beispiel state für fileio
     val deck0       = StandardDeckFactory.newDeck
     val (p1, deck1) = deck0.draw()
     val (p2, deck2) = deck1.draw()
@@ -36,14 +36,13 @@ object Main {
       budget      = 1000.0,
       currentBet  = 50.0
     )
-
-    // 4) XML- und JSON-Implementierungen holen
+    // XML- und JSON-Implementierungen holen
     val xmlKey  = com.google.inject.Key.get(classOf[IFileIO], Names.named("xml"))
     val jsonKey = com.google.inject.Key.get(classOf[IFileIO], Names.named("json"))
     val xmlIo   = injector.getInstance(xmlKey)
     val jsonIo  = injector.getInstance(jsonKey)
 
-    // 5) Speichern als Beispiel-Files
+    //Speichern als Beispiel-Files
     xmlIo.save(sampleState, "example-game-state.xml") match {
       case Success(_) => println("Beispiel XML gespeichert: example-game-state.xml")
       case Failure(ex) => println(s"XML speichern fehlgeschlagen: ${ex.getMessage}")
@@ -52,7 +51,7 @@ object Main {
       case Success(_) => println("Beispiel JSON gespeichert: example-game-state.json")
       case Failure(ex) => println(s"JSON speichern fehlgeschlagen: ${ex.getMessage}")
     }
-    
+    //GUI instanzieren und laufen lassen
     val guiInstance = injector.getInstance(classOf[BlackjackGuiApp])
     
     controller.addObserver(guiInstance)
