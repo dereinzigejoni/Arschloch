@@ -1,0 +1,17 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<game>
+        <budget>1000.0</budget>
+        <currentBet>50.0</currentBet>
+        <activeHand>0</activeHand>
+        <bets>
+          <bet>50.0</bet>
+        </bets>
+        <dealer>
+          <card suit="Heart" rank="Ace"/><card suit="Spades" rank="Ace"/>
+        </dealer>
+        <players>
+          <player idx="0" bet="50.0">
+              <card suit="Spades" rank="Jack"/><card suit="Heart" rank="Ten"/>
+            </player>
+        </players>
+      </game>
