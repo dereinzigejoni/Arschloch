@@ -1,16 +1,13 @@
 // src/main/scala/de/htwg/blackjack/io/json/JsonFileIO.scala
 package de.htwg.blackjack.io.json
-
 import com.google.inject.Inject
 import de.htwg.blackjack.io.IFileIO
 import de.htwg.blackjack.model.{Card, Deck, GameState, Hand, Rank, Suits}
 import de.htwg.blackjack.model.deck.IDeckFactory
 import de.htwg.blackjack.state.{GamePhase, GamePhases}
 import de.htwg.blackjack.state.GamePhases.*
-
 import scala.util.Try
 import upickle.default.*
-
 class JsonFileIO @Inject()(deckFactory: IDeckFactory) extends IFileIO {
 
   // 1) Rank ↔ String
