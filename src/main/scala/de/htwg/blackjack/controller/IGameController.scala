@@ -19,5 +19,7 @@ trait IGameController {
   def undo(): Option[GameState]
   def redo(): Option[GameState]
   def getLastRoundWin: Double
+  
+  def loadGame(state: GameState): Unit
 
 }

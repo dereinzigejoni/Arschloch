@@ -141,4 +141,9 @@ class GameController @Inject() (dealerStrat: DealerStrategy) extends IGameContro
     notifyObservers()
     newState
   }
+
+  /** Neu: lade einen kompletten GameState und benachrichtige die Views */
+  override def loadGame(gs: GameState): Unit = {
+    setStateInternal(gs)
+  }
 }

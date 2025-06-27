@@ -3,9 +3,11 @@ import com.google.inject.Inject
 import de.htwg.blackjack.bet.IBetService
 import de.htwg.blackjack.controller.{GameObserver, IGameController}
 import de.htwg.blackjack.di.ApplicationContext
+import de.htwg.blackjack.io.IFileIO
 import de.htwg.blackjack.model.deck.IDeckFactory
 import de.htwg.blackjack.model.{Card, GameState}
 import de.htwg.blackjack.state.GamePhases.*
+import scalafx.stage.FileChooser
 import scalafx.animation.PauseTransition
 import scalafx.application.JFXApp3
 import scalafx.application.JFXApp3.PrimaryStage
@@ -17,6 +19,7 @@ import scalafx.scene.layout.*
 import scalafx.scene.media.{AudioClip, Media, MediaPlayer}
 import scalafx.scene.paint.Color
 import scalafx.scene.text.Font
+import scalafx.stage.FileChooser.ExtensionFilter
 import scalafx.util.Duration
 
 import scala.compiletime.uninitialized
@@ -38,7 +41,10 @@ class BlackjackGuiApp @Inject()(
     deckStack.children.add(back)
   }
 
-  // --- Interfaces aus dem ApplicationContext ---
+
+  // --- DI: Hol Dir das FileIO (Default aus ApplicationContext) ---
+  private val fileIo: IFileIO = ApplicationContext.fileIO
+
 
   //private val controller = SharedGameController.instance
   controller.addObserver(this)
@@ -178,7 +184,48 @@ class BlackjackGuiApp @Inject()(
       onAction = _ =>
         if (selected.value) bgPlayer.pause() else bgPlayer.play()
     }
-    val btnBox   = new HBox(10, Seq(hitBtn, standBtn, dblBtn, splBtn, undoBtn, redoBtn, quitBtn,muteBtn): _*)
+    // Neu: Save & Load Buttons
+    // … in startApp(), dort wo Du saveBtn definierst …
+
+    val saveBtn = new Button("Speichern") {
+      onAction = _ => {
+        // Hier wirklich die ScalaFX-Klasse!
+        val chooser = new FileChooser()
+        chooser.title = "Spielzustand speichern"
+        // extensionFilters kommt erst durch jfxFileChooser2sfx
+        chooser.extensionFilters.addAll(
+          new ExtensionFilter("XML", "*.xml"),
+          new ExtensionFilter("JSON", "*.json")
+        )
+        val file = chooser.showSaveDialog(stage)
+        if (file != null) {
+          ApplicationContext.fileIO.save(controller.getState, file.getAbsolutePath) match {
+            case Success(_) => /* … Alert … */
+            case Failure(ex) => /* … Alert … */
+          }
+        }
+      }
+    }
+
+    val loadBtn = new Button("Laden") {
+      onAction = _ => {
+        val chooser = new FileChooser()
+        chooser.title = "Spielzustand laden"
+        chooser.extensionFilters.addAll(
+          new ExtensionFilter("XML", "*.xml"),
+          new ExtensionFilter("JSON", "*.json")
+        )
+        val file = chooser.showOpenDialog(stage)
+        if (file != null) {
+          ApplicationContext.fileIO.load(file.getAbsolutePath) match {
+            case Success(gs) => controller.loadGame(gs)
+            case Failure(ex) => /* … Alert … */
+          }
+        }
+      }
+    }
+
+    val btnBox   = new HBox(10, Seq(hitBtn, standBtn, dblBtn, splBtn, undoBtn, redoBtn, quitBtn,muteBtn,saveBtn,loadBtn): _*)
 
     gamePane = new VBox(15,
       new HBox(50, new VBox(new Label("Dealer-Hand:"), dealerArea), deckBox),
