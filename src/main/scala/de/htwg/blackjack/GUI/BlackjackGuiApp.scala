@@ -207,7 +207,7 @@ class BlackjackGuiApp @Inject()(
       }
     }
 
-    val loadBtn = new Button("LÄden") {
+    val loadBtn = new Button("Laden") {
       onAction = _ => {
         val chooser = new FileChooser()
         chooser.title = "Spielzustand laden"
