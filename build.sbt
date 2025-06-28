@@ -4,9 +4,12 @@ ThisBuild / version      := "0.1.0-SNAPSHOT"
 ThisBuild / organization := "de.htwg.blackjack"
 
 lazy val root = (project in file("."))
-  // Scoverage aktivieren
   .settings(
     name := "Blackjack",
+    coverageEnabled := true,
+    coverageHighlighting := true
+  ) 
+
 
     // Dependencies
     libraryDependencies ++= Seq(
@@ -22,16 +25,8 @@ lazy val root = (project in file("."))
 
       // OS‐Lib zum einfachen File‐Handling in JsonFileIO
       "com.lihaoyi"        %% "os-lib"            % "0.11.2",
+    )
+  enablePlugins(ScoverageSbtPlugin)
+  enablePlugins(CoverallsPlugin)
 
 
-    ),
-
-    // Scoverage‐Optionen
-    coverageEnabled := true,
-coverageHighlighting := true,   // Syntax-Hervorhebung im Bericht
-
-    // Compiler-Options
-
-    // Ressourcen
-    Compile / resourceDirectory := baseDirectory.value / "src" / "main" / "resources"
-  )
