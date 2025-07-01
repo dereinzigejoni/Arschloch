@@ -228,4 +228,115 @@ class GameControllerSpec extends AnyFunSuite {
     // Restdeck behält die zweite Karte
     assert(updated.deck.cards == List(card(Rank.Ace, Suits.Clubs)))
   }
+  test("setState should replace the state and notify observers") {
+    val ctrl = new GameController(new ConservativeDealer)
+    val obs = new TestObs
+    ctrl.addObserver(obs)
+
+    // minimaler Dummy-State
+    val dummy = GameState(
+      deck = StandardDeckFactory.newDeck,
+      playerHands = Nil,
+      dealer = Hand.empty,
+      bets = Nil,
+      activeHand = 0,
+      phase = PlayerTurn,
+      budget = 1000.0,
+      currentBet = 0.0
+    )
+
+    ctrl.setState(dummy)
+    ctrl.getState shouldBe dummy
+    obs.updates.head shouldBe dummy
+  }
+
+  test("setBudget should update the controller's budget") {
+    val ctrl = new GameController(new ConservativeDealer)
+    ctrl.setBudget(789.0)
+    ctrl.getBudget shouldBe 789.0
+  }
+
+  test("execute should delegate to Command, update state and notify observers") {
+    val ctrl = new GameController(new ConservativeDealer)
+    // starte von einem Basis-State
+    val base = GameState(
+      deck = StandardDeckFactory.newDeck,
+      playerHands = Nil,
+      dealer = Hand.empty,
+      bets = Nil,
+      activeHand = 0,
+      phase = PlayerTurn,
+      budget = 500.0,
+      currentBet = 0.0
+    )
+    ctrl.setState(base)
+
+    // Command, das einfach das Budget um +100 erhöht
+    val cmd = new Command {
+      override def execute(gs: GameState): Try[GameState] =
+        Success(gs.copy(budget = gs.budget + 100))
+    }
+
+    val obs = new TestObs
+    ctrl.addObserver(obs)
+
+    val res = ctrl.execute(cmd)
+    res shouldBe a[Success[_]]
+    res.get.budget shouldBe 600.0
+
+    // intern im Controller aktualisiert
+    ctrl.getState.budget shouldBe 600.0
+    // Observer wurde benachrichtigt
+    obs.updates.head.budget shouldBe 600.0
+  }
+
+  test("redo should call invoker.redo, update state and notify observers") {
+    val ctrl = new GameController(new ConservativeDealer)
+    // stub‐Invoker injizieren (via Reflection oder Setter – je nach API)
+    // angenommen: ctrl.setInvoker(...) existiert
+    val newState = GameState(
+      deck = StandardDeckFactory.newDeck,
+      playerHands = Nil,
+      dealer = Hand.empty,
+      bets = Nil,
+      activeHand = 0,
+      phase = PlayerTurn,
+      budget = 123.0,
+      currentBet = 0.0
+    )
+    ctrl.setInvoker(new Invoker {
+      override def redo() = Some(newState)
+
+      override def undo() = None
+    })
+
+    val obs = new TestObs
+    ctrl.addObserver(obs)
+
+    val result = ctrl.redo()
+    result shouldBe Some(newState)
+    ctrl.getState shouldBe newState
+    obs.updates.head shouldBe newState
+  }
+
+  test("loadGame should set entire state internally and notify observers") {
+    val ctrl = new GameController(new ConservativeDealer)
+    val fullState = GameState(
+      deck = StandardDeckFactory.newDeck,
+      playerHands = List(handOf(card(Rank.Ace, Suits.Clubs))),
+      dealer = Hand.empty,
+      bets = List(50.0),
+      activeHand = 0,
+      phase = PlayerTurn,
+      budget = 200.0,
+      currentBet = 50.0
+    )
+
+    val obs = new TestObs
+    ctrl.addObserver(obs)
+
+    ctrl.loadGame(fullState)
+    ctrl.getState shouldBe fullState
+    obs.updates.head shouldBe fullState
+  }
 }
