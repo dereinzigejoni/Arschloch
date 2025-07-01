@@ -7,11 +7,11 @@
           <bet>50.0</bet>
         </bets>
         <dealer>
-          <card suit="Diamonds" rank="Queen"/><card suit="Clubs" rank="Six"/>
+          <card suit="Diamonds" rank="Seven"/><card suit="Clubs" rank="Five"/>
         </dealer>
         <players>
           <player idx="0" bet="50.0">
-              <card suit="Clubs" rank="Nine"/><card suit="Diamonds" rank="Six"/>
+              <card suit="Spades" rank="Three"/><card suit="Heart" rank="Six"/>
             </player>
         </players>
       </game>

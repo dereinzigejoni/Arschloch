@@ -379,8 +379,7 @@ class BlackjackGuiApp @Inject()(
     gamePane.visible    = false; resultPane.visible = false
   }
   private def showBetScreen(): Unit = {
-
-    resetBoard() // <— hier das Board zurücksetzen
+    
     welcomePane.visible = false
     betPane.visible = true
     gamePane.visible = false

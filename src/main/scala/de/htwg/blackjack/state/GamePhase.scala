@@ -142,13 +142,10 @@ object GamePhases {
         phase      = GameOver
       )
     }
+
     private def isNatural(hand: Hand): Boolean = {
-      hand.cards match {
-        case List(c1, c2) =>
-          (c1.rank == Rank.Ace && c2.rank == Rank.King) ||
-            (c1.rank == Rank.King && c2.rank == Rank.Ace)
-        case _ => false
-      }
+      // Genau 2 Karten und Gesamtwert 21 = Blackjack
+      hand.cards.size == 2 && hand.value == 21
     }
   }
   case object PlayerBustPhase extends GamePhase{
