@@ -13,6 +13,5 @@ hs_err_pid*
 .vscode
 .metals
 project/
-.github/workflows
-.coveralls.yml
+
 
