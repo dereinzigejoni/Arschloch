@@ -5,10 +5,8 @@ ThisBuild / organization := "de.htwg.blackjack"
 
 lazy val root = (project in file("."))
   .settings(
-    name := "Blackjack",
-    coverageEnabled := true,
-    coverageHighlighting := true
-  ) 
+    name := "Blackjack"
+  )
 
 
     // Dependencies
