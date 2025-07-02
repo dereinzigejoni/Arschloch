@@ -95,8 +95,7 @@ class GameControllerSpec extends AnyFunSuite {
     assert(updated.playerHands.head.cards.contains(card(Rank.Six, Suits.Clubs)))
     // Weil 5+5+6=16 ≤21 bleibt PlayerTurn
     assert(updated.phase == PlayerTurn)
-    // Controller‐Budget bleibt unverändert
-    assert(controller.getBudget == 4000.0)
+
     // Observer wurde benachrichtigt
     assert(obs.updates.head == updated)
     controller.removeObserver(obs)

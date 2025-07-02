@@ -57,52 +57,53 @@ class TuiView @Inject()(contr: IGameController) extends GameObserver{
   }
   def run(): Unit = {
     printWelcome()
-    
     var playing = true
-    askBet() // löst über Observer initiales renderPartial() aus
-    
+
+    // Erstes Setzen des Einsatzes & Anzeige
+    askBet()
+    renderPartial()
+
     while (playing) {
-      //printMenu()
-      scala.util.Try(scala.io.StdIn.readLine().trim.toUpperCase) match {
-        case scala.util.Failure(ex) => println(s"Eingabefehler: ${ex.getMessage}")
-        
-      case scala.util.Success(cmd) =>
-        cmd match {
-        case "H" => controller.playerHit()
-          
-        case "S" => controller.playerStand()
-          
-        case "D" => controller.playerDouble()
-          
-        case "P" => controller.playerSplit()
-          
-        case "U" => controller.undo()
-          
-        case "R" => controller.redo()
-          
-        case "Q" => playing = false
-          
-        case _ => println(s"Unbekannter Befehl: $cmd")
-          
-        }
-        
-        if (controller.getState.phase != PlayerTurn) {
-          controller.resolveBet() // löst finales renderFull() via Observer aus
-            println(f"\nDein aktuelles Budget: €${controller.getBudget}%.2f\n")
-            println(hBorder('-'))
-             println(padCenter("[N] Neues Spiel    [Q] Quit"))
-            println(hBorder('-'))
-            scala.io.StdIn.readLine().trim.toUpperCase match {
-           case "N" => askBet()
-            
-          case _ => playing = false
-            
-          }
-          
-        }
-        
+      printMenu()
+      val cmd = Try(scala.io.StdIn.readLine().trim.toUpperCase) match {
+        case Failure(ex) =>
+          println(s"Eingabefehler: ${ex.getMessage}"); ""
+        case Success(s) => s
       }
-      
+
+      // Aktion ausführen
+      cmd match {
+        case "H" => controller.playerHit()
+        case "S" => controller.playerStand()
+        case "D" => controller.playerDouble()
+        case "P" => controller.playerSplit()
+        case "U" => controller.undo()
+        case "R" => controller.redo()
+        case "Q" =>
+          println("\nAuf Wiedersehen!");
+          playing = false
+        case _   =>
+          println(s"Unbekannter Befehl: $cmd")
+      }
+
+      // Nach Aktion je nach Phase ENTWEDER Partial oder Full rendern
+      val phase = controller.getState.phase
+      if (phase == PlayerTurn) {
+        renderPartial()
+      } else {
+        controller.resolveBet()  // löst jetzt kein weiteres Partial mehr aus
+        renderFull()
+        println(f"\nDein aktuelles Budget: €${controller.getBudget}%.2f\n")
+        println(hBorder('-'))
+        println(padCenter("[N] Neues Spiel    [Q] Quit"))
+        println(hBorder('-'))
+        scala.io.StdIn.readLine().trim.toUpperCase match {
+          case "N" =>
+            askBet()
+            renderPartial()
+          case _ => playing = false
+        }
+      }
     }
   }
   def askBet(): Unit = {
