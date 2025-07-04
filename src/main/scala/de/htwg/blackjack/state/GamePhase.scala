@@ -1,5 +1,5 @@
 package de.htwg.blackjack.state
-import de.htwg.blackjack.model.{GameState, Hand, Rank}
+import de.htwg.blackjack.model.{GameState, Hand}
 sealed trait GamePhase {
   def hit (gs: GameState): GameState
   def stand(gs: GameState): GameState
