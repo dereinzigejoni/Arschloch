@@ -8,10 +8,10 @@ WORKDIR /app
 # 3) Kopiere Projektdateien ins Image
 COPY build.sbt            ./
 COPY project/             ./project/
-COPY src/                 ./
+COPY src/                 ./src/
 
 # 4) Vorab Dependencies holen & kompilieren (Cache)
 RUN sbt update compile
 
 # 5) Standard-Kommando: Starte Deine TUI-Mainklasse
-CMD ["sbt", "-no-colors", "runMain", "de.htwg.blackjack.main.TuiMain"]
+CMD sbt -no-colors "runMain de.htwg.blackjack.main.TuiMain"
